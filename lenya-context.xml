@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<Context path="/lenya" docBase="/usr/share/lenya"
+        privileged="false" allowLinking="true">
+
+</Context>
