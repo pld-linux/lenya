@@ -14,7 +14,7 @@ Source1:	%{name}-context.xml
 Source2:	%{name}-log4j.xconf
 Source3:	%{name}-cocoon.xconf
 Source4:	%{name}-web.xml
-Source5:	${name}-mysql-schema.sql
+Source5:	%{name}-mysql-schema.sql
 URL:		http://lenya.apache.org/
 BuildRequires:	jpackage-utils
 BuildRequires:	rpm-javaprov
@@ -71,7 +71,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc mysql-schema.sql
+%doc CREDITS.txt KEYS NOTICE.txt README.txt RELEASE-NOTES.txt mysql-schema.sql
 %dir %{_sysconfdir}/lenya
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lenya/*
 %config(noreplace) %verify(not md5 mtime size) %{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
