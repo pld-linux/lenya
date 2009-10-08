@@ -1,5 +1,7 @@
 # TODO:
-# - build against system jars (?)
+# - some directories should be writeable for tomcat. Which one? Move them to /var/lib/lenya
+# - where to setup lenya username/passwords? Is it possible to integrate it
+#   with LDAP?
 
 %include	/usr/lib/rpm/macros.java
 Summary:	Open Source Java/XML Content Management System
@@ -35,13 +37,11 @@ search, WYSIWYG editors, and workflow.
 cp %{SOURCE5} mysql-schema.sql
 
 %build
-required_jars="bcel regexp xalan xercesImpl xml-apis"
-CLASSPATH=$(build-classpath $required_jars)
-
 # use bundled ant, because it does need ant < 1.7.0
 export ANT_HOME=tools
 
-# Yeah, ugly hack
+# some libs
+CLASSPATH=$(build-classpath-directory externals/cocoon_2_1_x/lib/endorsed)
 CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/ant-contrib-0.6.jar
 CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/jing-20030619.jar
 
