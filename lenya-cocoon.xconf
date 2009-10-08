@@ -1,0 +1,3076 @@
+<?xml version="1.0" encoding="UTF-8"?><!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+  
+<!-- CVS $Id$ -->
+
+<cocoon user-roles="/WEB-INF/classes/org/apache/lenya/lenya.roles" version="2.1">
+
+  <!--+
+      |  This is the Apache Cocoon configuration file. This is the place
+      |  where you configure the components that Cocoon uses internally (stuff
+      |  like the cache) or handles to the pipeline components
+      |  (stuff like XML parsers or XSLT processors).
+      +-->
+  
+  <!-- Database connection configuration -->
+
+  <datasources>
+
+    <!--
+      - See Excalibur documentation for details
+      - http://excalibur.apache.org/apidocs/org/apache/avalon/excalibur/datasource/ResourceLimitingJdbcDataSource.html
+      -->
+
+    <!-- Use MySQL -->
+
+      <jdbc name="personnel">
+    	  <pool-controller min="5" max="10"/>
+    	  <dburl>jdbc:mysql://localhost:3306/cocoondb?autoReconnect=true</dburl>
+    	  <user>cocoon</user>
+    	  <password>cocoon</password>
+      </jdbc>
+    
+      <jdbc name="LenyaScheduler">
+    	  <pool-controller min="5" max="10"/>
+    	  <dburl>jdbc:mysql://localhost:3306/cocoondb?autoReconnect=true</dburl>
+    	  <user>cocoon</user>
+    	  <password>cocoon</password>
+      </jdbc>
+
+     <!-- don't forget to enable jdbc driver in web.xml if you use other db engine
+        -
+        - If you have an Oracle database, and are using the the
+        - pool-controller below, you should add the attribute
+        - "oradb" and set it to true.
+        -
+        - <pool-controller min="5" max="10" oradb="true"/>
+        -
+        - That way the test to see if the server has disconnected
+        - the JdbcConnection will function properly.
+     -->
+
+    <!-- HSQLDB example (doesn't work for me)
+      <jdbc logger="core.datasources.personnel" name="personnel">
+        <pool-controller max="10" min="5" timeout="30000"/>
+        <dburl>jdbc:hsqldb:hsql://localhost:9002/cocoondb</dburl>
+        <user>sa</user>
+        <password/>
+      </jdbc>
+
+      <jdbc logger="core.datasources.lenya.scheduler" name="LenyaScheduler">
+        <pool-controller max="10" min="5">
+          <keep-alive>SELECT 1 FROM QRTZ_LOCKS</keep-alive>
+        </pool-controller>
+        <dburl>jdbc:hsqldb:hsql://localhost:9002/cocoondb</dburl>
+        <user>sa</user>
+        <password/>
+      </jdbc>
+    -->
+
+    <!-- you can also use container jdbc connection (doesn't work for me)
+
+      <j2ee name="personnel">
+	  <dbname>jdbc/lenya</dbname>
+      </j2ee>
+    
+      <j2ee name="LenyaScheduler">
+	  <dbname>jdbc/lenya</dbname>
+      </j2ee>
+    -->
+
+  </datasources>
+
+<!-- End of database configuration -->
+
+<!-- =========================== Sitemap =============================== -->
+
+  <!--+
+      | New implementation of the sitemap. It is interpreted, so load times
+      | are super-fast, and request processing is slightly faster than with
+      | the compiled engine thanks to the HotSpot VM.
+      |
+      | Reloading of the sitemap:
+      |   The check-reload attribute determines if the sitemap is to be
+      |   reloaded on change.
+      |   Set to "no", the sitemap is generated once at startup.
+      |   Set to "yes", the sitemap is regenerated if it changes.
+      |
+      | For development environment, set the check-reload to yes.
+      | For production environment, it is advisable to set check-reload to no.
+      +-->
+  <sitemap check-reload="yes" file="context://sitemap.xmap" logger="sitemap"/>
+
+<!-- ========================= Sitemap Flowscript ========================== -->
+
+  <!--+
+      |  The <flow-interpreters> element is used to describe the flowscript
+      |  engines usedd by the current instance.
+      |
+      |  The attributes recognized by the <flow-interpreters> element are:
+      |
+      |    default (string value):
+      |
+      |       the default interpreted language assumed for <map:script>
+      |       elements which do not specify a "language" attribute. If not
+      |       present, the first language that's described within the
+      |       <flow-interpreters> element is assumed to be the default
+      |       language.
+      |
+      |  Within <flow-interpreters> only <component-instance> elements are
+      |  recognized. The attributes recognized by this element are "name"
+      |  and "class". "name" specifies the name of a scripting language,
+      |  and "class" defines the Java class that implements it. See
+      |  org.apache.cocoon.components.flow.Interpreter for the Cocoon
+      |  interface with an scripting language interpreter.
+      |
+      |  A <component-instance> element contains as subelements the
+      |  following elements:
+      |
+      |    reload-scripts (boolean value, default false):
+      |       whether to check if the scripts source files are modified.
+      |       Checking for modification is an expensive operation, so leave
+      |       it disabled in a production environment. If not present it is
+      |       assumed to be "false". When "true" *all* script files are
+      |       checked for modification on each function invocation done using
+      |       <map:call function="...">, but not more frequent than the value
+      |       of "check-time" (see below).
+      |
+      |    check-time (long value, default 1000):
+      |       time in miliseconds between the checks for the last modification
+      |       date of script files.
+      |
+      |    debugger (boolean value, default false):
+      |       whether support for the JavaScript debugger should be enabled in
+      |       the control flow.
+      +-->
+  <flow-interpreters default="javascript" logger="flow">
+    <!-- FOM (Flow Object Model) -->
+    <component-instance class="org.apache.cocoon.components.flow.javascript.fom.FOM_JavaScriptInterpreter" name="javascript">
+      <load-on-startup>resource://org/apache/cocoon/components/flow/javascript/fom/fom_system.js</load-on-startup>
+      <reload-scripts>${javascript.reload-scripts}</reload-scripts>
+      <check-time>${javascript.check-time}</check-time>
+      <!--  <debugger>enabled</debugger> -->  <!-- JavaScript Debugger support -->
+    </component-instance>
+  </flow-interpreters>
+
+  <!--+
+      | Configuration for the continuations manager.
+      |
+      | This section specifies the default time-to-live of continuations
+      | in miliseconds using the "time-to-live" attribute of
+      | the <continuations-manager> element.
+      |
+      | If your site is sharing continuations between sitemaps you
+      | should refactor your application to keep a continuation bound to
+      | a single sitemap. The log will contain warnings which indicate
+      | where a continuation from a different sitemap is used.
+      |
+      | When you cannot do the refactoring in one blow you can turn on
+      | compatibility with shared continuations by setting the
+      | "continuation-sharing-bug-compatible" attribute to "true".
+      |
+      | The <expirations-check> element specifies different policies for
+      | expiring continuations. Currently only the "periodic" type is
+      | supported.
+      |
+      | If you need higher security you can bind your continuations
+      | to session. This way only the session that initially created
+      | the continuation can later resume it. Also if session gets
+      | invalidated all continuations are invalidated as well.
+      | Enable this feature for web applications by setting
+      | 'session-bound-continuations' to true.
+      +-->
+  <continuations-manager continuation-sharing-bug-compatible="false" logger="flow.manager" session-bound-continuations="false" time-to-live="${continuations-manager.time-to-live}">
+    <expirations-check type="periodic">
+      <offset>${continuations-manager.expirations-check.offset}</offset>
+      <period>${continuations-manager.expirations-check.period}</period>
+    </expirations-check>
+  </continuations-manager>
+
+<!-- =================== Sitemap Input/Output Modules ====================== -->
+
+  <!--+
+      | InputModules are a replacement to reading values directly
+      | e.g. from request parameters. By using this abstraction and
+      | indirection, other components can be more generic and changes
+      | to the application logic are easier.
+      |
+      | A number of components already use InputModules: the sitemap processor,
+      | flow, some matchers, the linkrewriting transformer, database actions
+      | and more.
+      |
+      | For example the sitemap processor allows to obtain a value
+      | named "foo" from an the InputModule for request parameters by
+      | writing {request-param:foo} wherever a sitemap variable is
+      | allowed.
+      |
+      | Some InputModules need the help of other InputModules to
+      | obtain values and only apply a function to the obtained value
+      | or change the name of the attribute. These modules usually
+      | carry "Meta" in their name. An example is the ChainMetaModule
+      | which tries several other modules in turn until a non-null
+      | value is obtained or all modules are tied.
+      |
+      | For details and optional configuration parameters refer to the
+      | accompanying javadocs.
+      +-->
+  <input-modules>
+    <component-instance class="org.apache.cocoon.components.modules.input.URLEncodeModule" logger="core.modules.input" name="url-encode">
+      <encoding>UTF-8</encoding>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.URLDecodeModule" logger="core.modules.input" name="url-decode">
+      <encoding>UTF-8</encoding>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.GlobalInputModule" logger="core.modules.input" name="global"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.RequestModule" logger="core.modules.input" name="request"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.BaseLinkModule" logger="core.modules.input" name="baselink"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.SessionModule" logger="core.modules.input" name="session"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.RequestParameterModule" logger="core.modules.input" name="request-param"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.RawRequestParameterModule" logger="core.modules.input" name="raw-request-param"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.RequestAttributeModule" logger="core.modules.input" name="request-attr"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.HeaderAttributeModule" logger="core.modules.input" name="request-header"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.SessionAttributeModule" logger="core.modules.input" name="session-attr"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.CookieModule" logger="core.modules.input" name="cookie"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.SystemPropertyModule" logger="core.modules.input" name="system-property"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.StringConstantModule" logger="core.modules.input" name="constant"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.RandomNumberModule" logger="core.modules.input" name="random"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.DigestMetaModule" logger="core.modules.input" name="digest"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.DateInputModule" logger="core.modules.input" name="date">
+      <!-- <format>EEE, d MMM yyyy HH:mm:ss Z</format> -->
+      <!--Eg: Mon, 28 Oct 2002 03:08:49 +1100 -->
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.NullInputModule" logger="core.modules.input" name="nullinput"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.RealPathModule" logger="core.modules.input" name="realpath"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.ContextPathModule" logger="core.modules.input" name="contextpath"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.NamingInputModule" logger="core.modules.input" name="naming">
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.PropertiesFileModule" logger="core.modules.input" name="cocoon-properties">
+      <file src="resource://org/apache/cocoon/cocoon.properties"/>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.FlowAttributeModule" logger="core.modules.input" name="flow-attribute"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.FlowAttributeModule" logger="core.modules.input" name="flow-attr"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.FlowContinuationModule" logger="core.modules.input" name="flow-continuation"/>
+
+    <component-instance class="org.apache.cocoon.components.modules.input.XMLMetaModule" logger="core.modules.input" name="xmlmeta"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.MapMetaModule" logger="core.modules.input" name="mapmeta"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.DateMetaInputModule" logger="core.modules.input" name="datemeta"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.JXPathMetaModule" logger="core.modules.input" name="jxpath"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.SimpleMappingMetaModule" logger="core.modules.input" name="simplemap"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.LocateResource" logger="core.modules.input" name="locate"/>
+    <component-instance class="org.apache.cocoon.components.modules.input.ChainMetaModule" logger="core.modules.input" name="chain">
+      <input-module name="request-param"/>
+      <input-module name="request-attr"/>
+      <input-module name="session-attr"/>
+      <input-module name="defaults"/>
+    </component-instance>
+
+    <!--+
+        | Following five modules definitions, 'defaults', 'myxml',
+        | 'slashdot' 'random-100-to-500' and 'random-5000-to-10000',
+        | are used only in the samples.
+        +-->
+    <component-instance class="org.apache.cocoon.components.modules.input.DefaultsModule" logger="core.modules.input" name="defaults">
+      <values>
+        <skin>defaultSkin</skin>
+        <base-url>http://localhost:8080/cocoon</base-url>
+      </values>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.XMLFileModule" logger="core.modules.input" name="myxml">
+      <file src="context://samples/modules/forrestconf.xml"/>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.XMLFileModule" logger="core.modules.input" name="slashdot">
+      <file src="http://slashdot.org/slashdot.rss"/>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.XPathXMLFileModule" logger="core.modules.input" name="xmyxml">
+      <file src="context://samples/modules/forrestconf.xml"/>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.XPathXMLFileModule" logger="core.modules.input" name="varxml">
+      <file src="context://samples/modules/{request-param:dir}/forrestconf.xml"/>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.RandomNumberModule" logger="core.modules.input" name="random-100-to-500">
+      <min>100</min>
+      <max>500</max>
+    </component-instance>
+    <component-instance class="org.apache.cocoon.components.modules.input.RandomNumberModule" logger="core.modules.input" name="random-5000-to-10000">
+      <min>5000</min>
+      <max>10000</max>
+    </component-instance>
+  <!--..... Start configuration from 'modules' -->
+
+
+      <!-- This input module provides access to the information of a session context -->
+      <component-instance class="org.apache.cocoon.webapps.session.components.ContextInputModule" logger="core.modules.input" name="session-context"/>
+
+<!--..... End configuration from 'modules' -->
+<!--..... Start configuration from 'db-modules-input' -->
+
+
+      <component-instance class="org.apache.cocoon.components.modules.input.CollectionMetaModule" logger="core.modules.input" name="collection"/>
+
+<!--..... End configuration from 'db-modules-input' -->
+<!--..... Start configuration from 'linkrewriter' -->
+
+
+      <!-- For the sitedemo sample -->
+      <component-instance class="org.apache.cocoon.components.modules.input.XMLFileModule" logger="core.modules.xml" name="linkmap">
+        <file src="cocoon://samples/linkrewriter/sitedemo/linkmap"/>
+        <!-- Shouldn't this be the default? -->
+        <reloadable>true</reloadable>
+      </component-instance>
+       <component-instance class="org.apache.cocoon.components.modules.input.SimpleMappingMetaModule" logger="core.modules.mapper" name="site">
+         <input-module name="linkmap"/>
+         <prefix>/site/</prefix>
+         <suffix>/@href</suffix>
+       </component-instance>
+
+       <!-- For the bookdemo sample -->
+       <component-instance class="org.apache.cocoon.components.modules.input.XMLFileModule" logger="core.modules.xml" name="book-raw">
+        <!-- Shouldn't this be the default? -->
+        <file src="cocoon://samples/linkrewriter/bookdemo/linkmap"/>
+        <reloadable>true</reloadable>
+      </component-instance>
+       <component-instance class="org.apache.cocoon.components.modules.input.SimpleMappingMetaModule" logger="core.modules.mapper" name="book">
+         <input-module name="book-raw"/>
+       </component-instance>
+ 
+<!--..... End configuration from 'linkrewriter' -->
+
+    <component-instance class="org.apache.cocoon.components.modules.input.DateInputModule" logger="core.modules.input" name="date-i18n">
+      <format>yyyy-MM-dd HH:mm:ss Z</format>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.DateConverterModule" logger="core.modules.input" name="date-iso8601-rfc822">
+      <src-pattern>yyyy-MM-dd HH:mm:ss Z</src-pattern>
+      <pattern>EEE, dd MMM yyyy HH:mm:ss Z</pattern>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.DocumentInfoModule" logger="sitemap.modules.input.doc-info" name="doc-info"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.DocumentURLModule" logger="core.modules.input.document-url" name="document-url"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.FallbackModule" logger="core.modules.input.fallback" name="fallback">
+      <parameter name="protocol" value="fallback"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.cocoon.components.modules.input.ChainMetaModule" logger="core.modules.input" name="forrest">
+      <input-module name="request-param"/>
+      <input-module name="request-attr"/>
+      <input-module name="session-attr"/>
+      <input-module name="defaults"/>
+      <input-module name="page-envelope"/>
+      <input-module name="access-control"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.PageEnvelopeModule" logger="sitemap.modules.input.page-envelope" name="page-envelope"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.ResourceTypeModule" logger="sitemap.modules.input.resource-type" name="resource-type"/>
+  
+
+  <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.LinkingModule" logger="core.modules.input.link" name="link"/>
+  
+
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.ProxyModule" logger="sitemap.modules.input.proxy" name="proxy"/>
+  
+  <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.AccessControlModule" logger="core.modules.input.access-control" name="access-control"/>
+
+
+  <component-instance class="org.apache.lenya.cms.usecase.cocoon.UsecaseModule" logger="core.modules.input.usecase" name="usecase"/>
+  
+
+    <component-instance class="org.apache.lenya.inbox.InboxModule" logger="core.modules.input.inbox" name="inbox"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.WorkflowModule" logger="core.modules.input.workflow" name="workflow"/>
+  
+
+  <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.UsecaseDocumentModule" logger="core.modules.input.usecase-document" name="usecase-document"/>
+  
+
+    <component-instance class="org.apache.cocoon.components.modules.input.DefaultsModule" name="xopus">
+      <values>
+        <!-- Same as from (local.)build.properties -->
+        <context>Xopus-2.1.79</context>
+        <path>../../../../tomcat-5.5.x/build/build/webapps/ROOT</path>
+      </values>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.SitetreeModule" logger="core.modules.input.sitetree" name="sitetree"/>
+  
+
+
+  <component-instance class="org.apache.lenya.modules.lucene.ImageQueryStringModule" logger="core.modules.input.imageQueryString" name="imageQueryString"/>
+  
+
+    <component-instance class="org.apache.cocoon.components.modules.input.IndexPathModule" logger="core.modules.input.index-path" name="index-path">
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.modules.lucene.QueryStringModule" logger="core.modules.input.queryString" name="queryString"/>
+  
+
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.MetaDataModule" logger="sitemap.modules.input.dublincore" name="dublincore" namespace="http://purl.org/dc/elements/1.1/"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.components.modules.input.PropertiesModule" logger="core.modules.input.properties" name="properties"/>
+  </input-modules>
+
+  <!--+
+      | OutputModules are companion modules for InputModules.
+      |
+      | The same principles apply here, only that OutputModules allow
+      | writing data to places. Apparently, there are a lot less
+      | places to write to than to read data from, thus there are only
+      | a few OutputModules coming with Apache Cocoon.
+      |
+      | One special feature of OutputModules is, that they expose some
+      | limited transactional behaviour. Hence it does not suffice to
+      | write a value, but it is required to confirm this at the
+      | end. Until then, the value could not be read from the
+      | corresponding InputModule. This behaviour is not enfored but
+      | it should be expected. Omitting a commit or rollback is an
+      | error.
+      |
+      | OutputModules are currently used by flow, a number of actions
+      | and transformers.
+      +-->
+  <output-modules>
+    <component-instance class="org.apache.cocoon.components.modules.output.RequestAttributeOutputModule" logger="core.modules.output" name="request-attr"/>
+    <component-instance class="org.apache.cocoon.components.modules.output.RequestAttributeMap" logger="core.modules.output" name="request-attr-map"/>
+    <component-instance class="org.apache.cocoon.components.modules.output.SessionAttributeOutputModule" logger="core.modules.output" name="session-attr"/>
+  </output-modules>
+
+<!-- ================================= XML ================================ -->
+
+  <!--+
+      | Entity resolution catalogs
+      |
+      | The default catalog is distributed at WEB-INF/entities/catalog
+      | This is the contextual pathname for Cocoon resources.
+      | You can override this path, if necessary, using the "catalog" parameter:
+      |
+      |    <parameter name="catalog" value="WEB-INF/entities/catalog"/>
+      |
+      | However, it is probably desirable to leave this default catalog config
+      | and declare your own local catalogs, which are loaded in addition to
+      | the system catalog.
+      |
+      | There are various ways to do local configuration (see "Entity Catalogs"
+      | documentation). One way is via the CatalogManager.properties file.
+      | As an additional method, you can specify the "local-catalog"
+      | parameter here.
+      |
+      | local-catalog:
+      |   The full filesystem pathname to a single local catalog file.
+      |
+      |  <parameter name="local-catalog" value="/usr/local/sgml/mycatalog"/>
+      |
+      | verbosity:
+      | The level of messages for status/debug (messages go to standard output)
+      | The following messages are provided ...
+      |  0 = none
+      |  1 = ? (... not sure yet)
+      |  2 = 1+, Loading catalog, Resolved public, Resolved system
+      |  3 = 2+, Catalog does not exist, resolvePublic, resolveSystem
+      |  10 = 3+, List all catalog entries when loading a catalog
+      |    (Cocoon also logs the "Resolved public" messages.)
+      |
+      |     <parameter name="verbosity" value="2"/>
+      +-->
+  <entity-resolver logger="core.resolver">
+    <parameter name="catalog" value="WEB-INF/entities/catalog"/>
+    <parameter name="verbosity" value="1"/>
+  </entity-resolver>
+
+  <!--+
+      | XML Parser
+      |
+      | Apache Cocoon requires a JAXP 1.1 parser. The default parser is
+      | org.apache.excalibur.xml.impl.JaxpParser.
+      | Note: If you have problems because your servlet environment uses its
+      | own parser not conforming to JAXP 1.1 try using the alternative
+      | XercesParser instead of the JaxpParser. To activate the XercesParser,
+      | change the class attribute to
+      |   class="org.apache.excalibur.xml.impl.XercesParser"
+      | You will also need to add a system property to your JVM,
+      | probably on the startup of your servlet engine like this:
+      | -Dorg.apache.excalibur.xml.sax.SAXParser=org.apache.excalibur.xml.impl.XercesParser
+      |
+      | Configuration parameters for the JaxpParser (not the XercesParser!):
+      | - validate (boolean, default = false): should the parser validate
+      |     parsed documents?
+      |     Note: XML validation is only being used for the documentation build.
+      |     (If you are going to use it elsewhere, then do so with caution.)
+      |     You really should have validated all of your XML documents already,
+      |     according to their proper DTD or schema. Do not expect Cocoon
+      |     to do it.
+      | - namespace-prefixes (boolean, default = false) : do we want
+      |     namespaces declarations also as 'xmlns:' attributes?
+      |     Note : setting this to true confuses some XSL processors
+      |     (e.g. Saxon).
+      | - stop-on-warning (boolean, default = true) : should the parser
+      |     stop parsing if a warning occurs ?
+      | - stop-on-recoverable-error (boolean, default = true) : should the
+      |     parser stop parsing if a recoverable error occurs ?
+      | - reuse-parsers (boolean, default = true) : do we want to reuse
+      |     parsers or create a new parser for each parse ?
+      |     Note : even if this parameter is true, parsers are not recycled
+      |     in case of parsing errors : some parsers (e.g. Xerces) do not like
+      |     to be reused after failure.
+      | - sax-parser-factory (string, optional) : the name of the
+      |     SAXParserFactory implementation class to be used instead of using
+      |     the standard JAXP mechanism (SAXParserFactory.newInstance()). This
+      |     allows to choose unambiguously the JAXP implementation to be used
+      |     when several of them are available in the classpath.
+      | - document-builder-factory (string, optional) : the name of the
+      |     DocumentBuilderFactory implementation to be used (similar to
+      |     sax-parser-factory for DOM).
+      | - drop-dtd-comments : should comment() events from DTD's be dropped?
+      |     Note: Since this implementation does not support the DeclHandler
+      |     interface anyway, it is quite useless to only have the comments
+      |     from DTD. And the comment events from the internal DTD subset
+      |     would appear in the serialized output again.
+      +-->
+  <xml-parser class="org.apache.excalibur.xml.impl.JaxpParser" logger="core.xml-parser" pool-max="${xml-parser.pool-max}">
+    <parameter name="validate" value="false"/>
+    <parameter name="namespace-prefixes" value="false"/>
+    <parameter name="stop-on-warning" value="true"/>
+    <parameter name="stop-on-recoverable-error" value="true"/>
+    <parameter name="reuse-parsers" value="false"/>
+    <parameter name="drop-dtd-comments" value="true"/>
+  </xml-parser>
+
+  <!--+
+      | XSLT Processor
+      |
+      | 'incremental-processing' (only works with Xalan) allows the XSLT
+      | processor to start the output of the transformation as soon as possible.
+      | if set to false, the transforer waits until the end of the
+      | transformation to deliver the output.
+      | WARNING: * if you enable incremental-processing, you should be aware of
+      |            the following bug:
+      |            http://issues.apache.org/bugzilla/show_bug.cgi?id=13186
+      |          * incremental-processing creates an additional, non-pooled thread.
+      |          * using incremental-processing does not save memory, the input
+      |            tree will still be build completely.
+      |          * incremental processing is a 'static' thing in Xalan: if you
+      |            enable it on one xslt-processor, enable it on all.
+      +-->
+  <xslt-processor logger="core.xslt">
+     <parameter name="use-store" value="true"/>
+     <parameter name="incremental-processing" value="false"/>
+  </xslt-processor>
+
+  <!--+
+      | XSLT Processor using xsltc from Xalan
+      | For Interpreted Xalan use:
+      | <transformer-factory>org.apache.xalan.processor.TransformerFactoryImpl</transformer-factory>
+      +-->
+  <component class="org.apache.cocoon.components.xslt.TraxProcessor" logger="core.xslt" role="org.apache.excalibur.xml.xslt.XSLTProcessor/xsltc">
+     <parameter name="use-store" value="true"/>
+     <parameter name="transformer-factory" value="org.apache.xalan.xsltc.trax.TransformerFactoryImpl"/>
+  </component>
+
+  <!--+
+      | Xalan XSLT Processor
+      +-->
+  <component class="org.apache.cocoon.components.xslt.TraxProcessor" logger="core.xslt" role="org.apache.excalibur.xml.xslt.XSLTProcessor/xalan">
+     <parameter name="use-store" value="true"/>
+     <parameter name="incremental-processing" value="false"/>
+     <parameter name="transformer-factory" value="org.apache.xalan.processor.TransformerFactoryImpl"/>
+  </component>
+
+  <!--+
+      | Saxon XSLT Processor
+      | For old (6.5.2) Saxon use:
+      |  <parameter name="transformer-factory" value="com.icl.saxon.TransformerFactoryImpl"/>
+      | For new (7+) Saxon use:
+      |  <parameter name="transformer-factory" value="net.sf.saxon.TransformerFactoryImpl"/>
+  <component logger="core.xslt"
+             role="org.apache.excalibur.xml.xslt.XSLTProcessor/saxon"
+             class="org.apache.cocoon.components.xslt.TraxProcessor">
+     <parameter name="use-store" value="true"/>
+     <parameter name="transformer-factory" value="com.icl.saxon.TransformerFactoryImpl"/>
+  </component>
+      +-->
+
+  <!--+
+      | Xpath Processor (Based on Xalan)
+      +-->
+  <xpath-processor class="org.apache.excalibur.xml.xpath.XPathProcessorImpl" logger="core.xpath"/>
+
+  <!--+
+      | The XMLizers converts different mime-types to XML
+      +-->
+  <xmlizer logger="core.xmlizer">
+    <parser mime-type="text/xml" role="org.apache.excalibur.xml.sax.SAXParser"/>
+  <!--..... Start configuration from 'tidy' -->
+
+
+      <parser mime-type="text/html" role="org.apache.excalibur.xml.sax.SAXParser/HTML"/>
+
+<!--..... End configuration from 'tidy' -->
+</xmlizer>
+
+<!-- ============================ Object Stores =========================== -->
+
+  <!--+
+      | Transient Store: holds objects that don't have to survive shutdown
+      |
+      | Common configuration parameters:
+      | maxobjects: Indicates how many objects will be held in the cache.
+      |    When the number of maxobjects has been reached. The last object
+      |    in the cache will be thrown out.
+      +-->
+  <transient-store logger="core.store.transient">
+    <parameter name="maxobjects" value="${transient-store.maxobjects}"/>
+  </transient-store>
+
+
+  <!--+
+      | Transient Store: holds objects that don't have to survive shutdown
+      |
+      | Common configuration parameters:
+      | maxobjects: Indicates how many objects will be held in the cache.
+      |    When the number of maxobjects has been reached. The last object
+      |    in the cache will be thrown out.
+      +-->
+  <xmlfile-store logger="core.store.transient">
+    <parameter name="maxobjects" value="${xmlfile-store.maxobjects}"/>
+  </xmlfile-store>
+
+  <!--+
+      | Store: generic store. The default implementation is an in-memory store
+      | backed by a disk store (based on EHCache). This forms a two-stage
+      | cache composed of a fast in-memory MRU front-end and a persistent
+      | back-end which stores the less-used objects.
+      |
+      | Common configuration parameters:
+      | maxobjects: Indicates how many objects will be held in the cache.
+      |    When the number of maxobjects has been reached. The last object
+      |    in the cache will be thrown out.
+      +-->
+  <store logger="core.store">
+    <parameter name="maxobjects" value="${store.maxobjects}"/>
+    <parameter name="use-cache-directory" value="true"/>
+  </store>
+
+  <!--+
+      | Store Janitor: the store garbage collector and memory usage controller.
+      |
+      | WARNING: Be careful with the heapsize and freememory parameters.
+      |           Wrong values can cause high cpu usage.
+      |
+      | Example configuration:
+      | Jvm settings:
+      |    -Xmx200000000
+      | store-janitor settings:
+      |    <parameter name="freememory" value="5000000"/>
+      |    <parameter name="heapsize" value="196000000"/>
+      |
+      | It is recommended to have heapsize equal to -Xmx, especially on Sun's
+      | JVM which are unable to shrink its heap once it grows above minimum.
+      | Freememory should be greater than amount of memory necessary for normal
+      | application operation.
+      | BUT: The heap size of the memory of the JVM is a little bit less than
+      |      the value you specify for -Xmx, so you have to set the heapsize
+      |      for the store janitor to a value which is lower (2% less seems
+      |      to be a working value).
+      +-->
+  <store-janitor logger="core.store.janitor">
+    <!--+
+        | How much free memory shall be available in the jvm?
+        | If not specified, defaults to 1Mb.
+        +-->
+    
+    <!--+
+        | How much memory at max jvm can consume?
+        | The default max heapsize for Sun's JVM is (almost) 64Mb,
+        | can be increased by specifying -Xmx command line parameter.
+        | If not specified, defaults to 66600000 bytes.
+        +-->
+    <parameter name="heapsize" value="${store-janitor.heapsize}"/>
+    <!--+
+        | How often shall the cleanup thread check memory?
+        | If not specified, defaults to 10 seconds.
+        +-->
+    <parameter name="cleanupthreadinterval" value="${store-janitor.cleanup-thread-interval}"/>
+    <!--+
+        | Experimental adaptive algorithm for cleanup interval
+    <parameter name="adaptivethreadinterval" value="true"/>
+        +-->
+    <!--+
+        | What percent of the store elements shall be dropped on low memory?
+        | If not specified, defaults to 10%
+        +-->
+    <parameter name="percent_to_free" value="${store-janitor.percent-to-free}"/>
+    <!--+
+        | Shall garbage collector be invoked on low memory?
+        | If not specified, defaults to false.
+        +-->
+    <parameter name="invokegc" value="false"/>
+    <!--+
+        | Algorithm describing how to clean caches in low memory situations.
+        |   round-robin: The registered caches are cycled through,
+        |                and each time there is a low memory situation one
+        |                of the registered caches has objects freed from it.
+        |   all-stores:  All registered stores have objects removed from
+        |                them each time there is a low memory situation.
+        | If not specified, defaults to 'round-robin'.
+        +-->
+    <parameter name="freeingalgorithm" value="round-robin"/>
+    <!--+
+        | Name of the thread pool to use.
+        | If not specified, defaults to 'daemon'.
+        +-->
+    <parameter name="thread-pool" value="daemon"/>
+
+    <!--+
+        | What should be the priority of the cleanup thread?
+        | This parameter is used only by older implementation of the janitor.
+        | New implementation uses centrally configured thread pool (see
+        | thread-pools element below).
+    <parameter name="threadpriority" value="5"/>
+        +-->
+  
+    <parameter name="freememory" value="10000000"/>
+  </store-janitor>
+
+<!-- ========================= Protocol Handlers =========================== -->
+
+  <!--+
+      | Source Factories
+      |
+      | Each source factory adds a special uri schemes to the system.
+      +-->
+  <source-factories>
+    <component-instance class="org.apache.excalibur.source.impl.ResourceSourceFactory" name="resource"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.ContextSourceFactory" name="context"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.SitemapSourceFactory" name="cocoon"/>
+
+    <!--+
+        | The "file:" source protocol is modifiable (can be written to) and
+        | traversable (directory structures can be crawled).
+        +-->
+    <component-instance class="org.apache.excalibur.source.impl.FileSourceFactory" name="file"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.PartSourceFactory" name="upload"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.ModuleSourceFactory" name="module"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.XModuleSourceFactory" name="xmodule"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.ZipSourceFactory" name="zip"/>
+    <component-instance class="org.apache.cocoon.components.source.impl.EmptySourceFactory" name="empty"/>
+
+    <!--+
+        | The "*" protocol handles all uri schemes that are not explicitely
+        | specified. This includes all JDK standard protocols.
+        +-->
+    <component-instance class="org.apache.excalibur.source.impl.URLSourceFactory" name="*"/>
+  <!--..... Start configuration from 'blob' -->
+
+
+    <!-- blob pseudo protocol -->
+    <component-instance class="org.apache.cocoon.components.source.impl.BlobSourceFactory" name="blob"/>
+
+<!--..... End configuration from 'blob' -->
+
+    <component-instance class="org.apache.lenya.cms.cocoon.source.AggregatingFallbackSourceFactory" logger="lenya.source.aggregatefallback" name="aggregate-fallback"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.source.FallbackSourceFactory" logger="lenya.source.fallback" name="fallback"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.source.LenyaSourceFactory" logger="lenya.source.lenya" name="lenya" scheme="context:"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.source.SiteSourceFactory" logger="lenya.source.site" name="site" scheme="site:"/>
+  
+    <component-instance class="org.apache.lenya.cms.cocoon.source.TemplateFallbackSourceFactory" logger="lenya.source.templatefallback" name="template-fallback"/>
+  
+
+  <component-instance class="org.apache.lenya.cms.cocoon.source.DocumentSourceFactory" logger="" name="lenya-document"/>
+  
+
+
+  <component-instance class="org.apache.lenya.cms.cocoon.source.LenyaDocSourceFactory" logger="" name="lenyadoc"/>
+  
+</source-factories>
+
+<!-- ================ Internationalization Catalogs =================== -->
+
+  <!--+
+      | I18n Bundle Factory
+      |
+      | BundleFactory loads Bundles with i18n resources for the given locale.
+      | Default location for bundles specified with the 'catalogue-location'.
+      +-->
+  <i18n-bundles logger="core.i18n">
+    <!--+
+        | Role of the store component to be used for caching loaded bundles.
+        +-->
+    <store-role>org.apache.excalibur.store.Store/TransientStore</store-role>
+    <!--+
+        | Reload check delay. Default 60000 (1 minute), 0 means no delay
+        | (check always), -1 means no reload.
+        +-->
+    <reload-interval>${i18n-bundles.reload-interval}</reload-interval>
+    <!--+
+        | Location of the default message catalogue. Optional.
+        +-->
+    <catalogue-location>context://samples/i18n/translations</catalogue-location>
+  </i18n-bundles>
+
+<!-- ====================== System Components =========================== -->
+
+  <!--+
+      | The core classloader implementation
+      +-->
+  <classloader class="org.apache.cocoon.components.classloader.ClassLoaderManagerImpl" logger="core.classloader"/>
+
+  <!--+
+      | XML compiler/decompiler
+      |
+      | These components are used to process SAX events and produce a binary
+      | representation that is much more compact and efficient for
+      | subsequent parsing. These are used by the cache system to save
+      | the intermediate results of the pipeline stages reducing the overhead
+      | of xml parsing/serialization.
+      +-->
+  <xml-serializer class="org.apache.cocoon.components.sax.XMLByteStreamCompiler" logger="core.xml.serializer" pool-max="${xml-serializer.pool-max}"/>
+  <xml-deserializer class="org.apache.cocoon.components.sax.XMLByteStreamInterpreter" logger="core.xml.deserializer" pool-max="${xml-deserializer.pool-max}"/>
+
+  <!--+
+      | The Cache Manager is a component that can be used to cache content.
+      | It is currently used by the cinclude transformer
+      +-->
+  <component class="org.apache.cocoon.transformation.helpers.DefaultIncludeCacheManager" role="org.apache.cocoon.transformation.helpers.IncludeCacheManager">
+    <!-- Set the preemptive-loader-url to a pipeline inside Cocoon that
+         contains the preemptive loader action. The URL must be absolute!
+    <parameter name="preemptive-loader-url"
+               value="http://localhost:8080/cocoon/samples/cinclude/loader"/>
+    -->
+  </component>
+
+  <!--+
+      | Runnable manager
+      |
+      | This component manages commands (Runnables) executed in background using
+      | preconfigured pools of worker threads
+      +-->
+  <runnable-manager logger="core.runnable">
+    <!--+
+        | This is the default configuration of the runnable-manager. More
+        | indepth information can be found at
+        | http://gee.cs.oswego.edu/dl/classes/EDU/oswego/cs/dl/util/concurrent/PooledExecutor.html
+        | The following elements can be used:
+        |
+        | thread-factory:        specifies the fully qualified class name of an
+        |                        org.apache.cocoon.components.thread.ThreadFactory
+        |                        implementation. It is responsible to create Thread
+        |                        classes.
+        | thread-pools:          container element for thread-pool elements.
+        | name:                  required name of the pool.
+        | priority:              optional priority all threads of the pool will
+        |                        have (the ThreadFactory will be set to this
+        |                        priority).The possible values  are:
+        |                          MIN:  corresponds to Thread#MIN_PRIORITY
+        |                          NORM: corresponds to Thread#NORM_PRIORITY (default)
+        |                          MAX:  corresponds to Thread#MAX_PRIORITY
+        | daemon:                whether newly created Threads should run in
+        |                        daemon mode or not. Default to false.
+        | queue-size:            optional size of a queue to hold Runnables if the
+        |                        pool is full. Possible values are:
+        |                          less than 0:    unbounded (default)
+        |                          equal to 0:     no queue at all
+        |                          greater than 0: size of the queue
+        | max-pool-size:         optional maximum number of threads in the pool.
+        |                        Defaults to 5.
+        |                        NOTE: if a queue is specified (queue-sie != 0)
+        |                              this value will be ignored.
+        | min-pool-size:         optional minimum number of threads in the pool.
+        |                        Defaults to 5.
+        |                        NOTE: if a queue has been specified (queue-sie != 0)
+        |                              this value will be used as the maximum of
+        |                              thread running concurrently.
+        | keep-alive-time-ms:    The time in ms an idle thread should keep alive
+        |                        before it might get garbage collected. This
+        |                        defaults to 60000 ms.
+        | block-policy;          The policy to be used if all resources (thread in
+        |                        the pool and slots in the queue) are exhausted.
+        |                        Possible values are:
+        |                          ABORT:         Throw a RuntimeException
+        |                          DISCARD:       Throw away the current request
+        |                                         and return.
+        |                          DISCARDOLDEST: Throw away the oldest request
+        |                                         and return.
+        |                          RUN (default): The thread making the execute
+        |                                         request runs the task itself.
+        |                                         This policy helps guard against
+        |                                         lockup.
+        |                          WAIT:          Wait until a thread becomes
+        |                                         available. This policy should, in
+        |                                         general, not be used if the
+        |                                         minimum number of threads is zero,
+        |                                         in which case a thread may never
+        |                                         become available.
+        | shutdown-graceful:     Terminate thread pool after processing all
+        |                        Runnables currently in queue. Any Runnable entered
+        |                        after this point will be discarded. A shut down
+        |                        pool cannot be restarted. This also means that a
+        |                        pool will need keep-alive-time-ms to terminate.
+        |                        The default value not to shutdown graceful.
+        | shutdown-wait-time-ms: The time in ms to wait before issuing an
+        |                        immediate shutdown after a graceful shutdown
+        |                        has been requested.
+        +-->
+    <thread-factory>org.apache.cocoon.components.thread.DefaultThreadFactory</thread-factory>
+    <thread-pools>
+      <!--+
+          | This is the default thread pool. It's use fits best for short
+          | running background tasks.
+          +-->
+      <thread-pool>
+        <name>default</name>
+        <priority>NORM</priority>
+        <daemon>false</daemon>
+        <queue-size>-1</queue-size>
+        <max-pool-size>5</max-pool-size>
+        <min-pool-size>5</min-pool-size>
+        <keep-alive-time-ms>60000</keep-alive-time-ms>
+        <block-policy>ABORT</block-policy>
+        <shutdown-graceful>false</shutdown-graceful>
+        <shutdown-wait-time-ms>-1</shutdown-wait-time-ms>
+      </thread-pool>
+      <!--+
+          | This thread pool should be used for daemons (permanently running
+          | threads).
+          +-->
+      <thread-pool>
+        <name>daemon</name>
+        <priority>NORM</priority>
+        <daemon>true</daemon>
+        <queue-size>0</queue-size>
+        <max-pool-size>-1</max-pool-size>
+        <min-pool-size>1</min-pool-size>
+        <keep-alive-time-ms>60000</keep-alive-time-ms>
+        <block-policy>ABORT</block-policy>
+        <shutdown-graceful>false</shutdown-graceful>
+        <shutdown-wait-time-ms>-1</shutdown-wait-time-ms>
+      </thread-pool>
+    </thread-pools>
+  </runnable-manager>
+<!--..... Start configuration from 'xsp-markup' -->
+
+  <!--+
+      | Logicsheets
+      |
+      | This section defines the XSP logicsheets. A logicsheet is a special
+      | XSLT stylesheet used to translate user-defined dynamic markup into
+      | equivalent XSP markup that embeds directives for a given markup
+      | language.
+      |
+      | Logicsheets are the XSP equivalent of taglibs. For info about
+      | the tags included in the default taglibs, please, refer to the
+      | documentation.
+      +-->
+  <markup-languages>
+    <xsp-language logger="core.markup.xsp" name="xsp">
+      <parameter name="prefix" value="xsp"/>
+      <parameter name="uri" value="http://apache.org/xsp"/>
+      <!--+
+          | These two flags determine whether XSP expression interpolation
+          | shall take place in attribute values and text nodes, respectively.
+          | The syntax {#expr} has been chosen that a clash with existing
+          | XSPs and logicsheets is unlikely.  The possibility to switch these
+          | features off is here only for safety.
+          +-->
+      <parameter name="attr-interpolation" value="true"/>
+      <parameter name="text-interpolation" value="true"/>
+
+      <!--+
+          | Properties for the java language
+          +-->
+      <target-language name="java">
+        <!-- Defines the XSP Core logicsheet for the Java language -->
+        <parameter name="core-logicsheet" value="resource://org/apache/cocoon/components/language/markup/xsp/java/xsp.xsl"/>
+
+        <!-- The Request logicsheet: access request parameters -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-request"/>
+          <parameter name="uri" value="http://apache.org/xsp/request/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/request.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The Response logicsheet: access response parameters -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-response"/>
+          <parameter name="uri" value="http://apache.org/xsp/response/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/response.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The Session logicsheet: manages and access the session -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-session"/>
+          <parameter name="uri" value="http://apache.org/xsp/session/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/session.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The Cookie logicsheet: manages and access cookies  -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-cookie"/>
+          <parameter name="uri" value="http://apache.org/xsp/cookie/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/cookie.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The Log logicsheet: access the cocoon logs from an xsp page  -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="log"/>
+          <parameter name="uri" value="http://apache.org/xsp/log/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/log.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The Utility logicsheet -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="util"/>
+          <parameter name="uri" value="http://apache.org/xsp/util/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/util.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The xsp-formval taglib serves as interface to retrieve
+             validation results from a request attribute -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-formval"/>
+          <parameter name="uri" value="http://apache.org/xsp/form-validator/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/form-validator.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The sel taglib allows to put multiple pages / view into
+             one xsp. While in general it is good style to put
+             different views into different xsp because they're more
+             easily maintained, this is a useful feature with
+             e.g. with long forms that are broken into parts -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="sel"/>
+          <parameter name="uri" value="http://apache.org/xsp/sel/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/sel.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The Action logicsheet -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="action"/>
+          <parameter name="uri" value="http://apache.org/cocoon/action/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/action.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The capture taglib is for capturing parts of the XSP-generated
+             XML as XML fragments or DOM nodes -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="capture"/>
+          <parameter name="uri" value="http://apache.org/cocoon/capture/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/capture.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The XScript logicsheet -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xscript"/>
+          <parameter name="uri" value="http://apache.org/xsp/xscript/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/xscript.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The SOAP logicsheet -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="soap"/>
+          <parameter name="uri" value="http://apache.org/xsp/soap/3.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/soap.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The JPath logicsheet -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="jpath"/>
+          <parameter name="uri" value="http://apache.org/xsp/jpath/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/jpath.xsl"/>
+        </builtin-logicsheet>
+
+        <!-- The input logicsheet allows easy access to InputModules -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="input"/>
+          <parameter name="uri" value="http://apache.org/cocoon/xsp/input/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/input.xsl"/>
+        </builtin-logicsheet>
+      <!--..... Start configuration from 'xsp-session-fw' -->
+
+
+        <!--+
+            |  The session-fw logicsheet is an XSP logicsheet that allows access to the session
+            | context
+            +-->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-session-fw"/>
+          <parameter name="uri" value="http://apache.org/xsp/session-fw/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/session-fw.xsl"/>
+        </builtin-logicsheet>
+
+
+<!--..... End configuration from 'xsp-session-fw' -->
+<!--..... Start configuration from 'esql' -->
+
+
+        <!-- The ESQL logicsheet is an XSP logicsheet that performs sql queries and 
+             serializes their results as XML. This allows you to work with data from a 
+             wide variety of different sources when using Apache Cocoon. -->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="esql"/>
+          <parameter name="uri" value="http://apache.org/cocoon/SQL/v2"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/esql.xsl"/>
+        </builtin-logicsheet>
+
+
+<!--..... End configuration from 'esql' -->
+<!--..... Start configuration from 'sendmail_xsl' -->
+
+
+        <!--+
+            |  The sendmail logicsheet is an XSP logicsheet that allows sending
+            |  simple emails as well as multipart mime emails
+            +-->
+        <builtin-logicsheet>
+          <parameter name="prefix" value="sendmail"/>
+          <parameter name="uri" value="http://apache.org/cocoon/sendmail/1.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/java/sendmail.xsl"/>
+        </builtin-logicsheet>
+
+<!--..... End configuration from 'sendmail_xsl' -->
+</target-language>
+
+      <!--+
+          | Properties for the javascript language
+          +-->
+      <target-language name="js">
+        <parameter name="core-logicsheet" value="resource://org/apache/cocoon/components/language/markup/xsp/javascript/xsp.xsl"/>
+
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-request"/>
+          <parameter name="uri" value="http://apache.org/xsp/request/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/javascript/request.xsl"/>
+        </builtin-logicsheet>
+
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-response"/>
+          <parameter name="uri" value="http://apache.org/xsp/response/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/javascript/response.xsl"/>
+        </builtin-logicsheet>
+
+        <builtin-logicsheet>
+          <parameter name="prefix" value="xsp-session"/>
+          <parameter name="uri" value="http://apache.org/xsp/session/2.0"/>
+          <parameter name="href" value="resource://org/apache/cocoon/components/language/markup/xsp/javascript/session.xsl"/>
+        </builtin-logicsheet>
+      </target-language>
+    </xsp-language>
+  </markup-languages>
+<!--..... End configuration from 'xsp-markup' -->
+<!--..... Start configuration from 'xsp-program-generator' -->
+
+  <!--+
+      | Program Generator
+      |
+      | The ProgamGenerator builds programs from a XML document written in a
+      | MarkupLanguage.
+      |
+      |    auto-reload: whether the system should check if the source was
+      |                 modified and reload of consequence.
+      |    root-package: the java package to use for the generated classes
+      |    preload: whether the system should preload the necessary components
+      +-->
+  <program-generator logger="core.program-generator">
+    <parameter name="auto-reload" value="true"/>
+    <parameter name="root-package" value="org.apache.cocoon.www"/>
+    <parameter name="preload" value="true"/>
+  </program-generator>
+<!--..... End configuration from 'xsp-program-generator' -->
+<!--..... Start configuration from 'xsp-program-language' -->
+
+  <!--+
+      | Programming Languages for the XSP pages
+      +-->
+  <programming-languages>
+    <java-language logger="core.language.java" name="java">
+
+      <!--+ Specifies which formatter to use to format source code.
+          | This parameter is optional.
+          | At the moment there is no implementation of a code formatter available.
+          +-->
+      <!--parameter name="code-formatter" value="org.apache.cocoon.components.language.programming.java.NullFormatter"/-->
+
+      <!-- A singleton-like implementation of a ClassLoader -->
+      <parameter name="class-loader" value="org.apache.cocoon.components.classloader.ClassLoaderManagerImpl"/>
+
+      <!--+
+          | Specifies which Java compiler to use. Possible variants are:
+          |
+          |  - EclipseJavaCompiler: the Eclipse JDT java compiler
+          |  - Javac: the java compiler that comes with JDK
+          |  - Jikes: the Jikes java compiler
+          |  - Pizza: the Pizza java compiler (deprecated. Support will be removed in 2.2)
+          |
+          | NOTE: the Eclipse JDT is the only java compiler that is capable
+          |       of imports classes thru the context classloader. All other
+          |       compilers import classes from the JVM classpath and might
+          |       normally result in ClassNotFound problems at compilation
+          |       time. It is *HIGHLY* suggested that you use this compiler
+          |       or you might experience problems in some servlet containers.
+          +-->
+      <parameter name="compiler" value="org.apache.cocoon.components.language.programming.java.EclipseJavaCompiler"/>
+      <!--parameter name="compiler" value="org.apache.cocoon.components.language.programming.java.Javac"/-->
+      <!--parameter name="compiler" value="org.apache.cocoon.components.language.programming.java.Jikes"/-->
+      <!--parameter name="compiler" value="org.apache.cocoon.components.language.programming.java.Pizza"/--> <!-- deprecated-->
+
+      <!--+
+          | Specifies the java code source version used to compile the XSP code.
+          |
+          | Posible values:
+          | 1.3 = Java version 1.3 
+          | 1.4 = Java version 1.4
+          | 1.5 = Java version 1.5
+          | auto = The version of the JVM where cocoon is running. (Default value).
+          |
+          | NOTE: The parameter is optional to keep backward compatibility.
+          |       The parameter works with Sun Javac compiler and the Eclipse compiler.
+          |       The pizza compiler does not support java 1.5.
+          +-->
+      <!-- <parameter name="compiler-compliance-level" value="auto"/> -->
+    </java-language>
+
+    <!-- Interpreted JavaScript language -->
+    <js-language logger="core.language.js" name="js"/>
+  </programming-languages>
+<!--..... End configuration from 'xsp-program-language' -->
+<!--..... Start configuration from 'xsp-xscript' -->
+
+  <!-- Xscript -->
+  <xscript logger="core.xscript">
+    <parameter name="xscript:copy-of" value="resource://org/apache/cocoon/components/xscript/xslt/copy-of.xsl"/>
+    <parameter name="xscript:value-of" value="resource://org/apache/cocoon/components/xscript/xslt/value-of.xsl"/>
+  </xscript>
+<!--..... End configuration from 'xsp-xscript' -->
+<!--..... Start configuration from 'session' -->
+
+
+  <session-manager logger="core.session-manager"/>
+  <session-form-manager logger="core.session-manager"/>
+  <session-transaction-manager logger="core.session-manager"/>
+  <session-context-manager logger="core.session-manager"/>
+
+  <session-media-manager logger="core.media-manager" pool-max="32">
+      <mediatypes default="html">
+        <media name="wap" useragent="Nokia"/>
+        <media name="wap" useragent="UP"/>
+        <media name="wap" useragent="Wapalizer"/>
+      </mediatypes>
+  </session-media-manager>
+
+  <session-context-providers>
+      <component-instance class="org.apache.cocoon.webapps.session.context.StandardSessionContextProvider" name="request"/>
+      <component-instance class="org.apache.cocoon.webapps.session.context.StandardSessionContextProvider" name="temporary"/>
+  </session-context-providers>
+<!--..... End configuration from 'session' -->
+<!--..... Start configuration from 'db-modules' -->
+
+   <!-- =============== Database Modules ==================== -->
+   
+   <autoincrement-modules>
+      <component-instance class="org.apache.cocoon.components.modules.database.HsqlIdentityAutoIncrementModule" logger="core.modules.auto" name="auto"/>
+<!--
+      Choose the one suitable for your DBMS. You *can* have more than
+      one at a time, but they need to have different names. You then
+      need to specify explicitly, which one to use in your descriptor
+      file.
+
+      <component-instance logger="core.modules.auto" name="auto" class="org.apache.cocoon.components.modules.database.ManualAutoIncrementModule"/>
+      <component-instance logger="core.modules.auto" name="auto" class="org.apache.cocoon.components.modules.database.IfxSerialAutoIncrementModule"/>
+      <component-instance logger="core.modules.auto" name="auto" class="org.apache.cocoon.components.modules.database.McKoiSequenceModule"/>
+      <component-instance logger="core.modules.auto" name="auto" class="org.apache.cocoon.components.modules.database.MysqlAutoIncrementModule"/>
+      <component-instance logger="core.modules.auto" name="auto" class="org.apache.cocoon.components.modules.database.PgsqlAutoIncrementModule"/>
+      <component-instance logger="core.modules.auto" name="auto" class="org.apache.cocoon.components.modules.database.SQLServerIdentityAutoIncrementModule"/>
+-->
+   </autoincrement-modules>
+<!--..... End configuration from 'db-modules' -->
+<!--..... Start configuration from 'hsqldb' -->
+
+
+  <!--+
+      | HSQLDB Server for samples:
+      |
+      |  port   : number      port where the server is listening
+      |  silent : true/false  display all queries
+      |  trace  : true/false  display JDBC trace messages
+      |  name   : string      name of the HSQL-DB
+      |  path   : string      path to the database - context-protocol is resolved      
+      +-->
+      <!--
+  <hsqldb-server class="org.apache.cocoon.components.hsqldb.ServerImpl" logger="core.hsqldb-server" pool-max="1">
+     <parameter name="port" value="9002"/>
+     <parameter name="silent" value="true"/>
+     <parameter name="trace" value="false"/>
+     <parameter name="thread-pool-name" value="daemon"/>
+     <parameter name="name" value="cocoondb"/>
+     <parameter name="path" value="context://WEB-INF/db"/>
+  </hsqldb-server>
+  -->
+    
+    <component class="org.apache.cocoon.components.cron.CocoonQuartzJobScheduler" logger="cron" role="org.apache.cocoon.components.cron.JobScheduler">
+      <!--+
+        | Definitions for a thread pool used to schedule jobs
+        +-->
+      <thread-pool>
+        <!--+
+          | Should we queue up execution requests if the pool is busy?
+          | Defaults to false
+          +-->
+        <use-queueing>false</use-queueing>
+        
+        <!--+
+          | How big should the queue be.
+          | Defaults to unlimited size (<0 == default)
+          +-->
+        <queue-size>-1</queue-size>
+        
+        <!--+
+          | The maximum size of the pool.
+          | Defaults to Integer.MAX_VALUE (<0 == default)
+          +-->
+        <max-pool-size>-1</max-pool-size>
+        
+        <!--+
+          | The minimum size of the pool.
+          | Defaults to 1 (<0 == default)
+          +-->
+        <min-pool-size>1</min-pool-size>
+        
+        <!--+
+          | How long will an idle thread be kept before it will be discarded.
+          | Defaults to 60000ms (<0 == default)
+          +-->
+        <keep-alive-time-ms>60000</keep-alive-time-ms>
+        
+        <!--+
+          | Which blocking policy should be used if the maximum pool
+          | size and queue size is bounded:
+          | Run:           (default) The thread making the execute
+          |                request runs the task itself. This policy
+          |                helps guard against lockup.
+          | Wait:          Wait until a thread becomes available.
+          | Abort:         Throw a RuntimeException
+          | Discard:       Throw away the current request and return.
+          | DiscardOldest: Throw away the oldest request and return.
+          +-->
+        <block-policy>RUN</block-policy>
+        
+        <!--+
+          | Should queued and running jobs be given a chance to finished
+          | on system shutdown. Defaults to true
+          +-->
+        <shutdown-graceful>true</shutdown-graceful>
+        
+        <!--+
+          | The maximum time to wait for running jobs to complete.
+          | Defaults to unlimited time (<0 == default)
+          +-->
+        <shutdown-wait-time-ms>5000</shutdown-wait-time-ms>
+      </thread-pool>
+      
+      <triggers/>
+      
+      <!--+
+        | Definition of the JobStore.
+        | Store type can be one of "ram" (default), "tx", or "cmt".
+        |
+        | "tx" and "cmt" stores require datasource configuration.
+        | (Attributes delegate and provider are optional)
+        +-->
+
+      <store delegate="org.quartz.impl.jdbcjobstore.StdJDBCDelegate" type="tx">
+        <datasource provider="excalibur">LenyaScheduler</datasource>
+      </store>
+      
+    </component>
+  
+
+<!--..... End configuration from 'hsqldb' -->
+<!--..... Start configuration from 'addressbook' -->
+
+	<component class="org.apache.cocoon.components.naming.LDAPEntryManager" logger="flow.ldap" role="org.apache.cocoon.components.naming.EntryManager">
+		<parameter name="ldap-host" value="ldap://localhost:389"/>
+		<parameter name="ldap-base" value="ou=addressbook,dc=ldap,dc=cocoongt,dc=org"/>
+		<parameter name="ldap-user" value="dc=ldap,dc=cocoongt,dc=org"/>
+		<parameter name="ldap-pass" value="secret"/>
+	</component>
+<!--..... End configuration from 'addressbook' -->
+<!--..... Start configuration from 'lucene' -->
+
+
+  <!-- Search:
+    These are the components that handle the search. 
+    
+    Cocoon indexer write into an index.
+    Cocoon searcher reads form an index, returning matched hits.
+    Cocoon crawler crawls all links starting from a given base URI.
+    Lucene xml indexer build a lucene document from XML content.
+   -->
+  <cocoon-indexer logger="core.search.indexer"/>
+  <cocoon-searcher logger="core.search.searcher"/>  
+  <cocoon-crawler logger="core.search.crawler"/>
+  <lucene-xml-indexer logger="core.search.lucene"/>
+<!--..... End configuration from 'lucene' -->
+<!--..... Start configuration from 'profiler' -->
+
+
+  <!--+ 
+      | Profiler:
+      | The profiler facilitates the gathering of statistics about timings of
+      | different steps of pipelines.
+      +-->
+  <profiler results="10"/>
+<!--..... End configuration from 'profiler' -->
+<!--..... Start configuration from 'cron' -->
+
+
+    
+
+  <!--+
+      | Sample definition of the TestCronJob cron job, used by
+      | trigger configuration above, as well as by sample page.
+      +-->
+  <component class="org.apache.cocoon.components.cron.TestCronJob" logger="cron.test" role="org.apache.cocoon.components.cron.CronJob/test">
+    <msg>I'm here</msg>
+    <sleep>23000</sleep>
+    <pipeline>samples/hello-world/hello.xhtml</pipeline>
+  </component>
+
+  <!--+
+      | Sample definition of the CocoonPipelineCronJob cron job, used by
+      | trigger configuration above.
+  <component role="org.apache.cocoon.components.cron.CronJob/pipeline-test"
+             class="org.apache.cocoon.components.cron.CocoonPipelineCronJob"
+             logger="cron.pipeline">
+      <pipeline>samples/hello-world/hello.xhtml</pipeline>
+  </component>
+      +-->
+
+<!--..... End configuration from 'cron' -->
+<!--..... Start configuration from 'cocoon-template-expression' -->
+
+  <expression-factory/>
+  <expression-compilers>
+    <component-instance class="org.apache.cocoon.components.expression.jxpath.JXPathCompiler" name="default"/>
+    <component-instance class="org.apache.cocoon.components.expression.jexl.JexlCompiler" name="jexl"/>
+    <component-instance class="org.apache.cocoon.components.expression.jxpath.JXPathCompiler" name="jxpath"/>
+    <component-instance class="org.apache.cocoon.components.expression.javascript.JavaScriptCompiler" name="js"/>
+  </expression-compilers>
+  <string-template-parsers>
+    <component-instance class="org.apache.cocoon.template.expression.JXTGStringTemplateParser" name="jxtg"/>
+    <component-instance class="org.apache.cocoon.template.expression.DefaultStringTemplateParser" name="default"/>
+  </string-template-parsers>
+<!--..... End configuration from 'cocoon-template-expression' -->
+<!--..... Start configuration from 'cocoon-template' -->
+
+    <component class="org.apache.cocoon.template.script.DefaultScriptManager" role="org.apache.cocoon.template.script.ScriptManager"/>
+    <component class="org.apache.cocoon.template.script.DefaultInstructionFactory" role="org.apache.cocoon.template.script.InstructionFactory"/>
+    <component class="org.apache.cocoon.template.expression.JXTGStringTemplateParser" role="org.apache.cocoon.template.expression.StringTemplateParser"/>
+<!--..... End configuration from 'cocoon-template' -->
+<!--..... Start configuration from 'deli' -->
+
+
+<!-- ================================ Deli ================================ -->
+
+  <!--+
+      | Deli CC/PP Database
+      |
+      | Deli matches the requesting user agent with a database of CC/PP
+      | profiles and augments the set of variables available to any XSLT
+      | stylesheet with stuff like user agent screen size, or color depth
+      | that can be useful for tuning your output to the various devices.
+      |
+      | Note: this is mostly useful for mobile agents such as cell phones
+      | or PDA where it's possible to associate the user-agent with the
+      | device that runs on.
+      +-->
+  <deli class="org.apache.cocoon.components.deli.DeliImpl">
+    <parameter name="deli-config-file" value="deli/config/deliConfig.xml"/>
+  </deli>
+  
+<!--..... End configuration from 'deli' -->
+<!--..... Start configuration from 'mailsender' -->
+
+
+    <!--+
+        |  Component for simplified mail sending.
+        +-->
+    <component class="org.apache.cocoon.mail.MailMessageSender" logger="core.mail.MailSender" role="org.apache.cocoon.mail.MailSender">
+      <!--+
+          | SMTP host name, user name, and password.
+      <smtp-host>127.0.0.1</smtp-host>
+      <smtp-user>john</smtp-user>
+      <smtp-password>john</smtp-password>
+          +-->
+    </component>
+
+<!--..... End configuration from 'mailsender' -->
+<!--..... Start configuration from 'soapserver' -->
+
+
+ <component class="org.apache.cocoon.components.axis.SoapServerImpl" logger="core.source.soapserver" role="org.apache.cocoon.components.axis.SoapServer">
+   <managed-services>
+     <descriptor src="resource://org/apache/cocoon/webservices/memory/DeploymentDescriptor.wsdd"/>
+     <descriptor src="resource://org/apache/cocoon/webservices/system/DeploymentDescriptor.wsdd"/>
+     <descriptor src="resource://org/apache/cocoon/webservices/cache/DeploymentDescriptor.wsdd"/>
+     <descriptor src="resource://org/apache/cocoon/webservices/instrument/DeploymentDescriptor.wsdd"/>     
+   </managed-services>
+ </component>
+<!--..... End configuration from 'soapserver' -->
+<!--..... Start configuration from 'forms-binding' -->
+
+
+  <!--+
+      | Cocoon Forms bindings
+      +-->
+  <forms-binding logger="forms.bindings">
+    <bindings>
+      <binding name="value" src="org.apache.cocoon.forms.binding.ValueJXPathBindingBuilder"/>
+      <binding name="multi-value" src="org.apache.cocoon.forms.binding.MultiValueJXPathBindingBuilder"/>
+      <binding name="context" src="org.apache.cocoon.forms.binding.ContextJXPathBindingBuilder"/>
+      <binding name="repeater" src="org.apache.cocoon.forms.binding.RepeaterJXPathBindingBuilder"/>
+      <binding name="simple-repeater" src="org.apache.cocoon.forms.binding.SimpleRepeaterJXPathBindingBuilder"/>
+      <binding name="temp-repeater" src="org.apache.cocoon.forms.binding.TempRepeaterJXPathBindingBuilder"/>
+      <binding name="aggregate" src="org.apache.cocoon.forms.binding.AggregateJXPathBindingBuilder"/>
+      <binding name="set-attribute" src="org.apache.cocoon.forms.binding.SetAttributeJXPathBindingBuilder"/>
+      <binding name="insert-node" src="org.apache.cocoon.forms.binding.InsertNodeJXPathBindingBuilder"/>
+      <binding name="delete-node" src="org.apache.cocoon.forms.binding.DeleteNodeJXPathBindingBuilder"/>
+      <binding name="insert-bean" src="org.apache.cocoon.forms.binding.InsertBeanJXPathBindingBuilder"/>
+      <binding name="javascript" src="org.apache.cocoon.forms.binding.JavaScriptJXPathBindingBuilder"/>
+      <binding name="custom" src="org.apache.cocoon.forms.binding.CustomJXPathBindingBuilder"/>
+      <binding name="case" src="org.apache.cocoon.forms.binding.CaseJXPathBindingBuilder"/>
+      <binding name="class" src="org.apache.cocoon.forms.binding.ClassJXPathBindingBuilder"/>
+      <binding name="new" src="org.apache.cocoon.forms.binding.NewJXPathBindingBuilder"/>
+      <binding name="struct" src="org.apache.cocoon.forms.binding.StructJXPathBindingBuilder"/>
+      <binding name="union" src="org.apache.cocoon.forms.binding.UnionJXPathBindingBuilder"/>
+      <binding name="group" src="org.apache.cocoon.forms.binding.GroupJXPathBindingBuilder"/>
+      <binding name="expand" src="org.apache.cocoon.forms.binding.ExpandJXPathBindingBuilder"/>
+      <binding name="import" src="org.apache.cocoon.forms.binding.ImportJXPathBindingBuilder"/>
+    </bindings>
+  </forms-binding>
+
+<!--..... End configuration from 'forms-binding' -->
+<!--..... Start configuration from 'forms-calculated-algorithms' -->
+
+
+  <!--+
+      | Cocoon Forms calculated fields algorithms
+      +-->
+  <forms-calculated-algorithms default="formula" logger="forms.algorithms">
+    <algorithm class="org.apache.cocoon.forms.formmodel.algorithms.SimpleFormulaBuilder" name="formula"/>
+    <algorithm class="org.apache.cocoon.forms.formmodel.algorithms.JavaScriptBuilder" name="javascript"/>
+    <algorithm class="org.apache.cocoon.forms.formmodel.algorithms.JavaAlgorithmBuilder" name="java"/>
+    <algorithm class="org.apache.cocoon.forms.formmodel.algorithms.RepeatedFormulaBuilder" name="repeatedformula"/>
+  </forms-calculated-algorithms>
+
+<!--..... End configuration from 'forms-calculated-algorithms' -->
+<!--..... Start configuration from 'forms-datatype' -->
+
+
+  <!--+
+      | Cocoon Forms datatypes and validation rules
+      +-->
+  <forms-datatype logger="forms.types">
+    <datatypes>
+      <datatype name="string" src="org.apache.cocoon.forms.datatype.typeimpl.StringTypeBuilder">
+        <convertors default="dummy" plain="dummy">
+          <convertor name="dummy" src="org.apache.cocoon.forms.datatype.convertor.DummyStringConvertorBuilder"/>
+          <convertor name="htmlcleaner" src="org.apache.cocoon.forms.datatype.convertor.HtmlCleaningConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="integer" src="org.apache.cocoon.forms.datatype.typeimpl.IntegerTypeBuilder">
+        <convertors default="formatting" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.PlainIntegerConvertorBuilder"/>
+          <convertor name="formatting" src="org.apache.cocoon.forms.datatype.convertor.FormattingIntegerConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="long" src="org.apache.cocoon.forms.datatype.typeimpl.LongTypeBuilder">
+        <convertors default="formatting" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.PlainLongConvertorBuilder"/>
+          <convertor name="formatting" src="org.apache.cocoon.forms.datatype.convertor.FormattingLongConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="decimal" src="org.apache.cocoon.forms.datatype.typeimpl.DecimalTypeBuilder">
+        <convertors default="formatting" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.PlainDecimalConvertorBuilder"/>
+          <convertor name="formatting" src="org.apache.cocoon.forms.datatype.convertor.FormattingDecimalConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="float" src="org.apache.cocoon.forms.datatype.typeimpl.FloatTypeBuilder">
+        <convertors default="formatting" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.PlainFloatConvertorBuilder"/>
+          <convertor name="formatting" src="org.apache.cocoon.forms.datatype.convertor.FormattingFloatConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="double" src="org.apache.cocoon.forms.datatype.typeimpl.DoubleTypeBuilder">
+        <convertors default="formatting" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.PlainDoubleConvertorBuilder"/>
+          <convertor name="formatting" src="org.apache.cocoon.forms.datatype.convertor.FormattingDoubleConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="date" src="org.apache.cocoon.forms.datatype.typeimpl.DateTypeBuilder">
+        <convertors default="formatting" plain="millis">
+          <convertor name="formatting" src="org.apache.cocoon.forms.datatype.convertor.FormattingDateConvertorBuilder"/>
+          <convertor name="millis" src="org.apache.cocoon.forms.datatype.convertor.MillisDateConvertorBuilder"/>
+          <convertor name="icu4j" src="org.apache.cocoon.forms.datatype.convertor.Icu4jDateConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="boolean" src="org.apache.cocoon.forms.datatype.typeimpl.BooleanTypeBuilder">
+        <convertors default="plain" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.PlainBooleanConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="enum" src="org.apache.cocoon.forms.datatype.typeimpl.EnumTypeBuilder">
+        <convertors default="enum" plain="enum">
+          <convertor name="enum" src="org.apache.cocoon.forms.datatype.convertor.EnumConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="bean" src="org.apache.cocoon.forms.datatype.typeimpl.BeanTypeBuilder">
+        <convertors default="bean" plain="bean">
+          <convertor name="bean" src="org.apache.cocoon.forms.datatype.convertor.BeanConvertorBuilder"/>
+        </convertors>
+      </datatype>
+      <datatype name="char" src="org.apache.cocoon.forms.datatype.typeimpl.CharTypeBuilder">
+        <convertors default="plain" plain="plain">
+          <convertor name="plain" src="org.apache.cocoon.forms.datatype.convertor.CharConvertorBuilder"/>
+        </convertors>
+      </datatype>
+    </datatypes>
+
+    <validation-rules>
+      <!-- old-style datatype validators (deprecated) -->
+      <validation-rule name="length" src="org.apache.cocoon.forms.datatype.validationruleimpl.LengthValidationRuleBuilder"/>
+      <validation-rule name="email" src="org.apache.cocoon.forms.datatype.validationruleimpl.EmailValidationRuleBuilder"/>
+      <validation-rule name="value-count" src="org.apache.cocoon.forms.datatype.validationruleimpl.ValueCountValidationRuleBuilder"/>
+      <validation-rule name="range" src="org.apache.cocoon.forms.datatype.validationruleimpl.RangeValidationRuleBuilder"/>
+      <validation-rule name="assert" src="org.apache.cocoon.forms.datatype.validationruleimpl.AssertValidationRuleBuilder"/>
+      <validation-rule name="mod10" src="org.apache.cocoon.forms.datatype.validationruleimpl.Mod10ValidationRuleBuilder"/>
+      <validation-rule name="regexp" src="org.apache.cocoon.forms.datatype.validationruleimpl.RegExpValidationRuleBuilder"/>
+    </validation-rules>
+  </forms-datatype>
+
+<!--..... End configuration from 'forms-datatype' -->
+<!--..... Start configuration from 'forms-expression' -->
+
+
+  <!--+
+      | Cocoon Forms expression language and additional functions
+      +-->
+  <forms-expression logger="forms.expression">
+    <function class="org.apache.cocoon.forms.expression.NullFunction" name="Null"/>
+    <function class="org.apache.cocoon.forms.expression.IsNullFunction" name="IsNull"/>
+    <function class="org.apache.cocoon.forms.expression.StringFunction" name="String"/>
+    <function class="org.apache.cocoon.forms.expression.SumFunction" name="Sum"/>
+  </forms-expression>
+
+<!--..... End configuration from 'forms-expression' -->
+<!--..... Start configuration from 'forms-form' -->
+
+
+  <!--+
+      | Cocoon Forms FormManager component and form model definition
+      +-->
+  <forms-formmanager logger="forms.model">
+    <widgets>
+      <widget name="form" src="org.apache.cocoon.forms.formmodel.FormDefinitionBuilder"/>
+      <widget name="import" src="org.apache.cocoon.forms.formmodel.ImportDefinitionBuilder"/>
+      <widget name="expand" src="org.apache.cocoon.forms.formmodel.ExpandDefinitionBuilder"/>
+      <widget name="field" src="org.apache.cocoon.forms.formmodel.FieldDefinitionBuilder"/>
+      <widget name="repeater" src="org.apache.cocoon.forms.formmodel.RepeaterDefinitionBuilder"/>
+      <widget name="booleanfield" src="org.apache.cocoon.forms.formmodel.BooleanFieldDefinitionBuilder"/>
+      <widget name="multivaluefield" src="org.apache.cocoon.forms.formmodel.MultiValueFieldDefinitionBuilder"/>
+      <widget name="action" src="org.apache.cocoon.forms.formmodel.ActionDefinitionBuilder"/>
+      <widget name="repeater-action" src="org.apache.cocoon.forms.formmodel.RepeaterActionDefinitionBuilder"/>
+      <widget name="row-action" src="org.apache.cocoon.forms.formmodel.RowActionDefinitionBuilder"/>
+      <widget name="submit" src="org.apache.cocoon.forms.formmodel.SubmitDefinitionBuilder"/>
+      <widget name="button" src="org.apache.cocoon.forms.formmodel.ButtonDefinitionBuilder"/>
+      <widget name="aggregatefield" src="org.apache.cocoon.forms.formmodel.AggregateFieldDefinitionBuilder"/>
+      <widget name="output" src="org.apache.cocoon.forms.formmodel.OutputDefinitionBuilder"/>
+      <widget name="upload" src="org.apache.cocoon.forms.formmodel.UploadDefinitionBuilder"/>
+      <widget name="messages" src="org.apache.cocoon.forms.formmodel.MessagesDefinitionBuilder"/>
+      <widget name="class" src="org.apache.cocoon.forms.formmodel.ClassDefinitionBuilder"/>
+      <widget name="new" src="org.apache.cocoon.forms.formmodel.NewDefinitionBuilder"/>
+      <widget name="struct" src="org.apache.cocoon.forms.formmodel.StructDefinitionBuilder"/>
+      <widget name="union" src="org.apache.cocoon.forms.formmodel.UnionDefinitionBuilder"/>
+      <widget name="group" src="org.apache.cocoon.forms.formmodel.GroupDefinitionBuilder"/>
+      <widget name="captcha" src="org.apache.cocoon.forms.formmodel.CaptchaDefinitionBuilder"/>
+      <widget name="tree" src="org.apache.cocoon.forms.formmodel.tree.builder.TreeDefinitionBuilder"/>
+      <widget name="imagemap" src="org.apache.cocoon.forms.formmodel.ImageMapDefinitionBuilder"/>
+      <widget name="calculatedfield" src="org.apache.cocoon.forms.formmodel.CalculatedFieldDefinitionBuilder"/>
+      <widget name="filterfield" src="org.apache.cocoon.forms.formmodel.RepeaterFilterFieldDefinitionBuilder"/>
+    </widgets>
+  </forms-formmanager>
+
+  <forms-treemodels>
+    <treemodel class="org.apache.cocoon.forms.formmodel.tree.builder.JavaTreeModelDefinitionBuilder" name="java"/>
+    <treemodel class="org.apache.cocoon.forms.formmodel.tree.builder.SourceTreeModelDefinitionBuilder" name="source"/>
+  </forms-treemodels>
+
+<!--..... End configuration from 'forms-form' -->
+<!--..... Start configuration from 'forms-selection-lists' -->
+
+
+  <!--+
+      | Cocoon Forms selection lists
+      +-->
+  <forms-selection-lists default="default" logger="forms.lists">
+    <selection-list class="org.apache.cocoon.forms.datatype.DefaultSelectionListBuilder" name="default"/>
+    <selection-list class="org.apache.cocoon.forms.datatype.FlowJXPathSelectionListBuilder" name="flow-jxpath"/>
+    <selection-list class="org.apache.cocoon.forms.datatype.EnumSelectionListBuilder" name="enum"/>
+    <selection-list class="org.apache.cocoon.forms.datatype.JavaSelectionListBuilder" name="java"/>
+    <selection-list class="org.apache.cocoon.forms.datatype.JavaScriptSelectionListBuilder" name="javascript"/>
+  </forms-selection-lists>
+
+<!--..... End configuration from 'forms-selection-lists' -->
+<!--..... Start configuration from 'forms-validators' -->
+
+
+  <!--+
+      | Cocoon Forms validators
+      +-->
+  <forms-validators logger="forms.validators">
+    <!-- new-style validators -->
+    <validator class="org.apache.cocoon.forms.validation.impl.JavaScriptValidatorBuilder" name="javascript"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.LengthValidatorBuilder" name="length"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.EmailValidatorBuilder" name="email"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.ValueCountValidatorBuilder" name="value-count"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.RangeValidatorBuilder" name="range"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.AssertValidatorBuilder" name="assert"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.Mod10ValidatorBuilder" name="mod10"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.RegExpValidatorBuilder" name="regexp"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.CaptchaValidatorBuilder" name="captcha"/>
+    <validator class="org.apache.cocoon.forms.validation.impl.JavaClassValidatorBuilder" name="java"/>
+  </forms-validators>
+
+<!--..... End configuration from 'forms-validators' -->
+<!--..... Start configuration from 'forms-widgetlisteners' -->
+
+
+  <!--+
+      | Cocoon Forms form widget listeners
+      +-->
+  <forms-widgetlisteners logger="forms.listeners">
+    <listener class="org.apache.cocoon.forms.event.impl.JavaClassWidgetListenerBuilder" name="java"/>
+    <listener class="org.apache.cocoon.forms.event.impl.JavaScriptWidgetListenerBuilder" name="javascript"/>
+  </forms-widgetlisteners>
+
+<!--..... End configuration from 'forms-widgetlisteners' -->
+<!--..... Start configuration from 'validation' -->
+
+
+  <!--+
+      | The shared Validator instance in Cocoon.
+      |
+      | This defaults to an instance of a "CachedValidator". To disable schema
+      | caching add the following attribute to the <validator ... /> element:
+      |
+      |   class="org.apache.cocoon.components.validation.impl.DefaultValidator"
+      +-->
+  <validator logger="core.validation">
+    <schema-parser class="org.apache.cocoon.components.validation.jing.JingSchemaParser" name="jing"/>
+    <schema-parser class="org.apache.cocoon.components.validation.jaxp.JaxpSchemaParser" name="jaxp">
+      <factory-class>org.apache.xerces.jaxp.validation.XMLSchemaFactory</factory-class>
+    </schema-parser>
+  </validator>
+  
+<!--..... End configuration from 'validation' -->
+<!--..... Start configuration from 'imageop' -->
+
+
+   <!-- =============== Image Operations ==================== -->
+    <image-operations>
+      <component-instance class="org.apache.cocoon.reading.imageop.ScaleOperation" logger="imageop" name="scale"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.ResizeOperation" logger="imageop" name="resize"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.RotateOperation" logger="imageop" name="rotate"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.OffsetOperation" logger="imageop" name="offset"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.MirrorOperation" logger="imageop" name="mirror"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.AffineTransformOperation" logger="imageop" name="affine"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.GrayScaleOperation" logger="imageop" name="grayscale"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.ConvolveOperation" logger="imageop" name="convolve"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.ColorOperation" logger="imageop" name="color"/>
+      <component-instance class="org.apache.cocoon.reading.imageop.ShearOperation" logger="imageop" name="shear"/>
+    </image-operations>
+    
+<!--..... End configuration from 'imageop' -->
+<!--..... Start configuration from 'metadata' -->
+
+    <meta-data>
+    <component-instance class="org.apache.lenya.cms.metadata.ConfigurableElementSet" name="http://apache.org/lenya/metadata/workflow/1.0">
+      <element multiple="true" name="workflowVersion" onCopy="delete"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.metadata.ConfigurableElementSet" name="http://apache.org/lenya/metadata/media/1.0">
+      <element multiple="false" name="filename"/>
+      <element multiple="false" name="width"/>
+      <element multiple="false" name="height"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.metadata.ConfigurableElementSet" name="http://apache.org/lenya/metadata/site/1.0">
+      <element editable="true" multiple="false" name="folderNode"/>
+      <element editable="true" multiple="false" name="externalLink"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.metadata.ConfigurableElementSet" name="http://purl.org/dc/elements/1.1/">
+      <element editable="true" multiple="false" name="title" searchable="true"/>
+      <element editable="true" multiple="false" name="creator"/>
+      <element editable="true" multiple="false" name="subject" searchable="true"/>
+      <element editable="true" multiple="false" name="description" searchable="true"/>
+      <element editable="true" multiple="false" name="publisher"/>
+      <element editable="true" multiple="false" name="contributor"/>
+      <element editable="true" multiple="false" name="date"/>
+      <element editable="true" multiple="false" name="type"/>
+      <element editable="true" multiple="false" name="format"/>
+      <element editable="true" multiple="false" name="identifier"/>
+      <element editable="true" multiple="false" name="source"/>
+      <element editable="true" multiple="false" name="language"/>
+      <element editable="true" multiple="false" name="relation"/>
+      <element editable="true" multiple="false" name="coverage"/>
+      <element editable="true" multiple="false" name="rights"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.metadata.ConfigurableElementSet" name="http://purl.org/dc/terms/">
+      <element editable="true" multiple="false" name="abstract" searchable="true"/>
+      <element editable="true" multiple="false" name="accessRights"/>
+      <element editable="true" multiple="false" name="alternative"/>
+      <element editable="true" multiple="false" name="audience"/>
+      <element editable="true" multiple="false" name="available"/>
+      <element editable="true" multiple="false" name="bibliographicCitation"/>
+      <element editable="true" multiple="false" name="conformsTo"/>
+      <element editable="true" multiple="false" name="created"/>
+      <element editable="true" multiple="false" name="dateAccepted"/>
+      <element editable="true" multiple="false" name="dateCopyrighted"/>
+      <element editable="true" multiple="false" name="dateSubmitted"/>
+      <element editable="true" multiple="false" name="educationLevel"/>
+      <element editable="true" multiple="false" name="extent"/>
+      <element editable="true" multiple="false" name="hasFormat"/>
+      <element editable="true" multiple="false" name="hasPart"/>
+      <element editable="true" multiple="false" name="hasVersion"/>
+      <element editable="true" multiple="false" name="isFormatOf"/>
+      <element editable="true" multiple="false" name="isPartOf"/>
+      <element editable="true" multiple="false" name="isReferencedBy"/>
+      <element editable="true" multiple="false" name="isReplacedBy"/>
+      <element editable="true" multiple="false" name="isRequiredBy"/>
+      <element editable="true" multiple="false" name="issued"/>
+      <element editable="true" multiple="false" name="isVersionOf"/>
+      <element editable="true" multiple="false" name="license"/>
+      <element editable="true" multiple="false" name="mediator"/>
+      <element editable="true" multiple="false" name="medium"/>
+      <element editable="true" multiple="false" name="modified"/>
+      <element editable="true" multiple="false" name="references"/>
+      <element editable="true" multiple="false" name="replaces"/>
+      <element editable="true" multiple="false" name="requires"/>
+      <element editable="true" multiple="false" name="rightsHolder"/>
+      <element editable="true" multiple="false" name="spatial"/>
+      <element editable="true" multiple="false" name="tableOfContents"/>
+      <element editable="true" multiple="false" name="temporal"/>
+      <element editable="true" multiple="false" name="valid"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.metadata.ConfigurableElementSet" name="http://apache.org/lenya/metadata/document/1.0">
+      <element multiple="false" name="resourceType"/>
+      <element multiple="false" name="contentType"/>
+      <element multiple="false" name="mimeType"/>
+      <element multiple="false" name="expires"/>
+      <element multiple="false" name="extension"/>
+    </component-instance>
+  </meta-data>
+  <!--..... End configuration from 'metadata' -->
+<!--..... Start configuration from 'resource-types' -->
+
+    <resource-types>
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.resource" name="resource">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/resource/resources/schemas/resource.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/resource/samples/resource.xml"/>
+    <format name="xhtml" uri="cocoon://modules/resource/xhtml.xml"/>
+    <format name="downloadLink" uri="cocoon://modules/resource/downloadLink.xml"/>
+    <format name="icon" uri="cocoon://modules/resource/icon"/>
+    <format name="luceneIndex" uri="cocoon://modules/resource/lucene-index"/>
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.entry" name="entry">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/blog/resources/schemas/entry.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/blog/resources/samples/entry.xml"/>
+  </component-instance>
+  
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.sidebar" name="sidebar">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/blog/resources/schemas/sidebar.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/blog/samples/sidebar.xml"/>
+  </component-instance>
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.feed" name="feed">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/blog/resources/schemas/feed.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/blog/resources/samples/feed.xml"/>
+  </component-instance>
+  
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.collection" name="collection">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/collection/resources/schemas/collection.rng"/>
+    <sample mime-type="application/xml" name="Manual" uri="fallback://lenya/modules/collection/samples/collection.xml"/>
+    <sample mime-type="application/xml" name="Children" uri="fallback://lenya/modules/collection/samples/children.xml"/>
+    <format name="collection" uri="cocoon://modules/collection/collection.xml"/>
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.news" name="news">
+    
+    <!-- Default time in seconds until the resource-type has expired -->  
+    <expires seconds="3600"/>
+    
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/collection/resources/schemas/collection.rng"/>
+    
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/news/samples/news.xml"/>
+    <format name="xhtml" uri="cocoon://modules/news/xhtml.xml"/>
+    <format name="include" uri="cocoon://modules/news/include.xml"/>
+    <format name="rss" uri="cocoon://modules/news/rss.xml"/>
+    <format name="header" uri="cocoon://modules/news/header.xml"/>
+    
+  </component-instance>
+
+
+  
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.usecase" name="usecase">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/usecasedocument/resources/schemas/usecase.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/usecasedocument/samples/usecase.xml"/>
+    <format name="xhtml" uri="cocoon://modules/usecasedocument/usecase.xml"/>
+  </component-instance>
+  
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.links" name="links">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/links/resources/schema/links.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/links/samples/links.xml"/>
+    <format name="xhtml" uri="cocoon://modules/links/xhtml.xml"/>
+    <format name="luceneIndex" uri="cocoon://modules/xhtml/lucene-index"/>
+    <format name="webdavGET" uri="cocoon://modules/xhtml/davget.xml"/>
+  </component-instance>
+
+
+  
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.xhtml" name="xhtml">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/xhtml/resources/schemas/xhtml.rng"/>
+    
+    <!-- Default time in seconds until the resource-type has expired -->  
+    <expires seconds="3600"/>
+    
+    <samples uri="fallback://lenya/modules/xhtml/samples/samples.xml"/>
+    
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@href"/>
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@data"/>
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@src"/>
+    <format name="xhtml" uri="cocoon://modules/xhtml/xhtml.xml"/>
+    <format name="webdavGET" uri="cocoon://modules/xhtml/davget.xml"/>
+    <format name="luceneIndex" uri="cocoon://modules/xhtml/lucene-index"/>
+    <!-- "xslt-clean" format is used by webDAV (and other editors?) to "clean" xml content before it is validated/saved --> 
+    <format name="xslt-clean" uri="fallback://lenya/modules/xhtml/xslt/clean-xhtml.xsl"/>
+    <format name="icon" uri="cocoon://modules/xhtml/icon"/>
+    
+  </component-instance>
+  
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.cforms" name="cforms">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/cforms/schemas/cforms.rng"/>
+    <sample mime-type="application/xml" uri="fallback://lenya/modules/cforms/samples/cforms.xml"/>
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@href"/>
+    <format name="xhtml" uri="cocoon://modules/cforms/xhtml.xml"/>
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.opendocument" name="opendocument">
+    <sample mime-type="application/vnd.oasis.opendocument.text" uri="fallback://lenya/modules/opendocument/samples/helloworld.odt"/>
+    <!-- NOTE: Will be matched within sitemap of this module (modules/opendocument/sitemap.xmap) -->
+    <format name="xhtml" uri="cocoon://modules/opendocument/xhtml.xml"/>
+    <format name="webdavGET" uri="cocoon://modules/opendocument/davget.xml"/>
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.publication.ResourceTypeImpl" logger="lenya.resourcetypes.homepage" name="homepage">
+    <schema namespace="http://relaxng.org/ns/structure/0.9" uri="fallback://lenya/modules/homepage/resources/schemas/homepage.rng"/>
+
+    <!-- Default time in seconds until the resource-type has expired -->  
+    <expires seconds="0"/>
+
+    <sample mime-type="application/xhtml+xml" uri="fallback://lenya/modules/homepage/samples/homepage.xml"/>
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@href"/>
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@data"/>
+    <link-attribute xpath="//*[namespace-uri() = 'http://www.w3.org/1999/xhtml']/@src"/>
+    <format name="xhtml" uri="cocoon://modules/homepage/xhtml.xml"/>
+    <format name="luceneIndex" uri="cocoon://modules/xhtml/lucene-index"/>
+    <format name="webdavGET" uri="cocoon://modules/xhtml/davget.xml"/>
+    <!-- "xslt-clean" format is used by webDAV (and other editors?) to "clean" xml content before it is validated/saved -->
+    <format name="xslt-clean" uri="fallback://lenya/modules/homepage/xslt/clean-homepage.xsl"/>
+  </component-instance>
+
+</resource-types>
+  <!--..... End configuration from 'resource-types' -->
+<!--..... Start configuration from 'template-instantiators' -->
+
+    <template-instantiators>
+
+    <component-instance class="org.apache.lenya.defaultpub.cms.publication.templating.Instantiator" logger="lenya.publication.templating" name="default"/>
+
+  </template-instantiators>
+  <!--..... End configuration from 'template-instantiators' -->
+
+    <component class="org.apache.lenya.cms.cocoon.components.context.ContextUtility" logger="lenya.cocoon.components" role="org.apache.lenya.cms.cocoon.components.context.ContextUtility"/>
+  
+    <document-builders>
+      <component-instance class="org.apache.lenya.cms.publication.DefaultDocumentBuilder" logger="lenya.publication" name="default"/>
+    </document-builders>
+  
+    <component class="org.apache.lenya.cms.publication.DocumentFactoryBuilderImpl" logger="lenya.cocoon.components" role="org.apache.lenya.cms.publication.DocumentFactoryBuilder"/>
+  
+    <component class="org.apache.lenya.cms.metadata.MetaDataRegistryImpl" logger="lenya.cocoon.components" role="org.apache.lenya.cms.metadata.MetaDataRegistry"/>
+  
+    <component class="org.apache.lenya.cms.repository.SharedItemStoreImpl" logger="lenya.cocoon.components" role="org.apache.lenya.cms.repository.SharedItemStore"/>
+  
+    <site-managers>
+
+  <component-instance class="org.apache.lenya.cms.site.tree2.TreeSiteManager" logger="lenya.site" name="tree"/>
+  
+
+    <component-instance class="org.apache.lenya.cms.site.simple.SimpleSiteManager" logger="lenya.site" name="simple"/>
+  </site-managers>
+  
+    <component class="org.apache.lenya.cms.repository.AxisUUIDGenerator" logger="lenya.cocoon.components" role="org.apache.lenya.cms.repository.UUIDGenerator"/>
+  
+<component class="org.apache.lenya.cms.module.ModuleManagerImpl" role="org.apache.lenya.cms.module.ModuleManager">
+<modules copy="true">
+<module shortcut="bxe" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/bxe"/>
+<module shortcut="svg" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/svg"/>
+<module shortcut="blog" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/blog"/>
+<module shortcut="kupu" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/kupu"/>
+<module shortcut="news" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/news"/>
+<module shortcut="collection" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/collection"/>
+<module shortcut="usecasedocument" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/usecasedocument"/>
+<module shortcut="notification" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/notification"/>
+<module shortcut="links" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/links"/>
+<module shortcut="xhtml" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/xhtml"/>
+<module shortcut="xopus" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/xopus"/>
+<module shortcut="resource" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/resource"/>
+<module shortcut="editors" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/editors"/>
+<module shortcut="fckeditor" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/fckeditor"/>
+<module shortcut="sitetree" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/sitetree"/>
+<module shortcut="menubar" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/menubar"/>
+<module shortcut="lenyadoc" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/lenyadoc"/>
+<module shortcut="tinymce" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/tinymce"/>
+<module shortcut="cforms" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/cforms"/>
+<module shortcut="migration" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/migration"/>
+<module shortcut="navigation" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/navigation"/>
+<module shortcut="development" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/development"/>
+<module shortcut="export" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/export"/>
+<module shortcut="neutron" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/neutron"/>
+<module shortcut="opendocument" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/opendocument"/>
+<module shortcut="sourcerepository" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/sourcerepository"/>
+<module shortcut="prettyprinting" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/prettyprinting"/>
+<module shortcut="lucene" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/lucene"/>
+<module shortcut="webdav" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/webdav"/>
+<module shortcut="profiling" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/profiling"/>
+<module shortcut="linkcheck" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/linkcheck"/>
+<module shortcut="contactform" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/contactform"/>
+<module shortcut="simplesite" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/simplesite"/>
+<module shortcut="languageselector" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules/languageselector"/>
+<module shortcut="ac" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/ac"/>
+<module shortcut="i18n" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/i18n"/>
+<module shortcut="ldap" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/ldap"/>
+<module shortcut="metadata" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/metadata"/>
+<module shortcut="observation" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/observation"/>
+<module shortcut="cache" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/cache"/>
+<module shortcut="acusecases" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/acusecases"/>
+<module shortcut="linking" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/linking"/>
+<module shortcut="monitoring" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/monitoring"/>
+<module shortcut="sitemanagement" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/sitemanagement"/>
+<module shortcut="properties" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/properties"/>
+<module shortcut="workflow" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/workflow"/>
+<module shortcut="administration" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/administration"/>
+<module shortcut="usecase" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/usecase"/>
+<module shortcut="janitor" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/janitor"/>
+<module shortcut="templating" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/modules-core/templating"/>
+<module shortcut="homepage" src="/home/users/z/rpm/BUILD/apache-lenya-2.0.2-src/src/pubs/default/modules/homepage"/>
+</modules>
+</component>
+
+    <component class="org.apache.lenya.ac.cache.SourceCacheImpl" logger="lenya.ac.cache" role="org.apache.lenya.ac.cache.SourceCache"/>
+  
+
+  <!-- Lenya can rewrite the links to cater to special proxy setups.
+    Make sure to update the proxy configuration in publication.xml as well.
+    For information about these settings, read
+    http://lenya.apache.org/docs/2_0_x/tutorials/proxy.html
+
+    The example setting below describes a test setup that corresponds to the example 
+    in src/pubs/default/config/publication.xml.
+  -->
+  <component class="org.apache.lenya.cms.linking.impl.GlobalProxiesImpl" logger="lenya.proxy" role="org.apache.lenya.cms.linking.GlobalProxies">
+<!--
+    <proxy ssl="false" url="http://www.example.com/lenya"/>
+    <proxy ssl="true" url="https://www.example.com/lenya"/>
+-->
+  </component>
+  
+
+
+  <component class="org.apache.lenya.cms.linking.ContentLinkManager" logger="" role="org.apache.lenya.cms.linking.LinkManager"/>
+  
+
+
+  <component class="org.apache.lenya.cms.linking.LinkResolverImpl" logger="" role="org.apache.lenya.cms.linking.LinkResolver"/>
+  
+
+  <access-controller-resolvers>
+    <component-instance class="org.apache.lenya.cms.ac.PublicationAccessControllerResolver" logger="lenya.ac.accesscontrollerresolver.publication" name="publication">
+    </component-instance>
+    <component-instance class="org.apache.lenya.ac.impl.ConfigurableAccessControllerResolver" logger="lenya.ac.accesscontrollerresolver.global" name="global">
+      <access-controller type="global"/>
+    </component-instance>
+    <component-instance class="org.apache.lenya.ac.impl.ComposableAccessControllerResolver" logger="lenya.ac.accesscontrollerresolver.composable" name="composable">
+      <resolver type="publication"/>
+      <!--      <resolver type="global"/>-->
+    </component-instance>
+  </access-controller-resolvers>
+
+  <component class="org.apache.lenya.ac.file.FileAccreditableManagerFactory" logger="lenya.ac.accreditablemanager" role="org.apache.lenya.ac.AccreditableManagerFactory"/>
+
+  <component class="org.apache.lenya.ac.impl.UserAuthenticator" logger="lenya.ac.authenticator" role="org.apache.lenya.ac.Authenticator"/>
+    
+  <!--
+    Enable this authenticator and disable the UserAuthenticator for anonymous authentication (useful for client certs, for instance)
+    
+    <component logger="lenya.ac.authenticator"
+      class="org.apache.lenya.ac.impl.AnonymousAuthenticator"
+      role="org.apache.lenya.ac.Authenticator"/>      
+  -->
+  
+
+  <authorizers>
+    <component-instance class="org.apache.lenya.cms.ac.usecase.impl.UsecaseAuthorizerImpl" logger="lenya.ac.authorizer.usecase" name="usecase"/>
+  </authorizers>
+
+  <component class="org.apache.lenya.ac.impl.BypassableAccessController" logger="lenya.ac.accesscontroller.bypassable" role="org.apache.lenya.ac.AccessController/bypassable">
+    
+    <public-extensions>css,jpg,gif,png,rng,xsl</public-extensions>
+    
+    <!-- bad performance, use only for complex patterns
+      <public>.*[.]css|.*[.]jpg|.*[.]gif|.*[.]png|.*[.]rng|.*[.]xsl</public>
+    -->
+    
+  </component>
+
+  <policy-managers>
+    <component-instance class="org.apache.lenya.cms.ac.DocumentPolicyManagerWrapper" logger="lenya.ac.policymanager.document" name="document"/>
+    <component-instance class="org.apache.lenya.ac.file.FilePolicyManager" logger="lenya.ac.policymanager.file" name="file"/>
+    <component-instance class="org.apache.lenya.cms.ac.SitemapPolicyManager" logger="lenya.ac.policymanager.sitemap" name="sitemap"/>
+  </policy-managers>
+  
+
+    <gui-manager>
+    <tab-group name="admin">
+      <tab label="Users" name="users" usecase="admin.users"/>
+      <tab label="Groups" name="groups" usecase="admin.groups"/>
+      <tab label="IP Ranges" name="ipRanges" usecase="admin.ipRanges"/>
+      <tab label="Usecases" name="usecases" usecase="admin.usecases"/>
+      <tab label="Delete Trash" name="trash" usecase="admin.emptyTrash"/>
+      <tab label="Server Status" name="serverStatus" usecase="admin.serverStatus"/>
+      <tab label="Sessions" name="sessions" usecase="admin.sessions"/>
+      <tab label="Publication" name="pubConf" usecase="admin.showPubConf"/>
+      <tab label="Overview" name="siteOverview" usecase="admin.siteOverview"/>
+      <tab label="Reports" name="reports" usecase="admin.reports"/>
+      <tab label="Live CheckIn" name="forceLiveCheckIn" usecase="admin.liveCheckIn"/>
+    
+    <tab label="Inbox" name="inbox" usecase="notification.inbox"/>
+  </tab-group>
+  
+    <tab-group name="site">
+      <tab label="Overview" name="overview" usecase="tab.overview"/>
+      <tab label="Meta" name="meta" usecase="tab.meta"/>
+      <tab label="Assets" name="assets" usecase="tab.assets"/>
+      <tab label="Workflow" name="workflow" usecase="tab.workflow"/>
+      <tab label="Revisions" name="revisions" usecase="tab.revisions"/>
+      <tab label="AC Auth" name="acAuthoring" usecase="tab.acAuthoring">
+        <parameter name="acArea" value="authoring"/>
+      </tab>
+      <tab label="AC Trash" name="acTrash" usecase="tab.acTrash">
+        <parameter name="acArea" value="trash"/>
+      </tab>
+      <tab label="AC Archive" name="acArchive" usecase="tab.acArchive">
+        <parameter name="acArea" value="archive"/>
+      </tab>
+      <tab label="AC Live" name="acLive" usecase="tab.acLive"/>
+      <tab label="Scheduler" name="scheduler" usecase="tab.scheduler"/>
+    </tab-group>
+  </gui-manager>
+  
+    <component class="org.apache.lenya.cms.usecase.impl.TestUsecaseInvoker" logger="lenya.usecase.invoker" role="org.apache.lenya.cms.usecase.impl.TestUsecaseInvoker"/>
+  
+    <component class="org.apache.lenya.cms.usecase.scheduling.impl.UsecaseCronJob" logger="cron.usecase" role="org.apache.cocoon.components.cron.CronJob/usecase"/>
+    
+  
+    <component class="org.apache.lenya.cms.usecase.impl.UsecaseInvokerImpl" logger="lenya.usecase" role="org.apache.lenya.cms.usecase.UsecaseInvoker"/>
+  
+    <component class="org.apache.lenya.cms.usecase.impl.UsecaseResolverImpl" logger="lenya.usecase" role="org.apache.lenya.cms.usecase.UsecaseResolver"/>
+  
+    <usecases>
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.Login" logger="lenya.ac" name="ac.login">
+      <view uri="modules/acusecases/usecases/login.jx"/>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.Logout" logger="lenya.ac" name="ac.logout">
+      <view uri="modules/acusecases/usecases/logout.jx"/>
+    </component-instance>
+    
+  
+  <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.monitoring" name="monitoring.sessionLogs">
+    <view createContinuation="false" menu="true" uri="modules/monitoring/usecases/sessionLogs.jx"/>
+  </component-instance>
+
+
+  <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.admin" name="admin.aboutLenya">
+    <view createContinuation="false" menu="true" uri="modules/administration/usecases/aboutLenya.jx"/>
+  </component-instance>
+  
+
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AddGroup" logger="lenya.admin" name="admin.addGroup">
+      <view menu="true" uri="modules/administration/usecases/addGroup.jx">
+        <tab group="admin" name="groups"/>
+      </view>
+      <exit usecase="admin.group"/>
+    </component-instance>
+    
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AddIPRange" logger="lenya.admin" name="admin.addIPRange">
+      <view menu="true" uri="modules/administration/usecases/addIPRange.jx">
+        <tab group="admin" name="ipRanges"/>
+      </view>
+      <exit usecase="admin.ipRanges"/>
+    </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AddUser" logger="lenya.admin" name="admin.addUser">
+      <view menu="true" uri="modules/administration/usecases/addUser.jx">
+        <tab group="admin" name="users"/>
+      </view>
+      <exit usecase="admin.user"/>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.ChangePassword" logger="lenya.admin" name="admin.changePassword">
+      <view uri="modules/administration/usecases/changePassword.jx">
+        <parameter name="checkPassword" value="true"/>
+      </view>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.ChangePasswordAdmin" logger="lenya.admin" name="admin.changePasswordAdmin">
+      <view menu="true" uri="modules/administration/usecases/changePasswordAdmin.jx">
+        <tab group="admin" name="users"/>
+        <parameter name="checkPassword" value="false"/>
+      </view>
+      <exit usecase="admin.user"/>
+    </component-instance>
+    
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.DeleteGroup" logger="lenya.admin" name="admin.deleteGroup">
+      <view menu="true" uri="modules/administration/usecases/deleteGroup.jx">
+        <tab group="admin" name="groups"/>
+      </view>
+      <exit usecase="admin.groups"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.DeleteIPRange" logger="lenya.admin" name="admin.deleteIPRange">
+      <view menu="true" uri="modules/administration/usecases/deleteIPRange.jx">
+        <tab group="admin" name="ipRanges"/>
+      </view>
+      <exit usecase="admin.ipRanges"/>
+    </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.DeleteUser" logger="lenya.admin" name="admin.deleteUser">
+      <view menu="true" uri="modules/administration/usecases/deleteUser.jx">
+        <tab group="admin" name="users"/>
+      </view>
+      <exit usecase="admin.users"/>
+    </component-instance>
+    
+  
+
+  <component-instance class="org.apache.lenya.cms.publication.usecases.EditPubConf" logger="lenya.admin" name="admin.editPubConf">
+    <view menu="true" uri="modules/administration/usecases/editPubConf.jx">
+      <tab group="admin" name="pubConf"/>
+    </view>
+    <exit usecase="admin.showPubConf"/>
+  </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.site.usecases.EmptyTrash" logger="lenya.admin" name="admin.emptyTrash">
+      <view menu="true" uri="modules/administration/usecases/emptyTrash.jx">
+        <tab group="admin" name="trash"/>
+      </view>
+      <exit usecase="admin.emptyTrash"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.ForceLiveCheckIn" logger="lenya.admin" name="admin.liveCheckIn">
+      <view menu="true" uri="modules/administration/usecases/forceLiveCheckIn.jx">
+        <tab group="admin" name="forceLiveCheckIn"/>
+      </view>
+      <exit usecase="admin.liveCheckIn"/>
+    </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.Group" logger="lenya.admin" name="admin.group">
+      <view menu="true" uri="modules/administration/usecases/group.jx">
+        <tab group="admin" name="groups"/>
+      </view>
+      <exit usecase="admin.groups"/>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.GroupMembers" logger="lenya.admin" name="admin.groupMembers">
+      <view menu="true" uri="modules/administration/usecases/groupMembers.jx">
+        <tab group="admin" name="groups"/>
+      </view>
+      <exit usecase="admin.group">
+        <parameter name="groupId"/>
+      </exit>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.GroupProfile" logger="lenya.admin" name="admin.groupProfile">
+      <view menu="true" uri="modules/administration/usecases/groupProfile.jx">
+        <tab group="admin" name="groups"/>
+      </view>
+      <exit usecase="admin.group">
+        <parameter name="groupId"/>
+      </exit>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.Groups" logger="lenya.admin" name="admin.groups">
+      <view menu="true" uri="modules/administration/usecases/groups.jx">
+        <tab group="admin" name="groups"/>
+      </view>
+      <exit usecase="admin.groups"/>
+    </component-instance>
+    
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.IPRange" logger="lenya.admin" name="admin.ipRange">
+      <view menu="true" uri="modules/administration/usecases/ipRange.jx">
+        <tab group="admin" name="ipRanges"/>
+      </view>
+      <exit usecase="admin.ipRanges"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.IPRangeGroups" logger="lenya.admin" name="admin.ipRangeGroups">
+      <view menu="true" uri="modules/administration/usecases/ipRangeGroups.jx">
+        <tab group="admin" name="ipRanges"/>
+      </view>
+      <exit usecase="admin.ipRange">
+        <parameter name="ipRangeId"/>
+      </exit>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.IPRangeProfile" logger="lenya.admin" name="admin.ipRangeProfile">
+      <view menu="true" uri="modules/administration/usecases/ipRangeProfile.jx">
+        <tab group="admin" name="ipRanges"/>
+      </view>
+      <exit usecase="admin.ipRange">
+        <parameter name="ipRangeId"/>
+      </exit>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.IPRanges" logger="lenya.admin" name="admin.ipRanges">
+      <view menu="true" uri="modules/administration/usecases/ipRanges.jx">
+        <tab group="admin" name="ipRanges"/>
+      </view>
+      <exit usecase="admin.ipRanges"/>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.modules.administration.Reports" logger="lenya.admin" name="admin.reports">
+    <view createContinuation="false" menu="true" uri="modules/administration/usecases/reports.jx">
+      <tab group="admin" name="reports"/>
+    </view>
+  </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.admin" name="admin.serverStatus">
+      <view menu="true" uri="modules/administration/usecases/serverStatus.jx">
+        <tab group="admin" name="serverStatus"/>
+      </view>
+      <exit usecase="admin.serverStatus"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.SessionViewer" logger="lenya.admin" name="admin.sessions">
+      <view createContinuation="false" menu="true" uri="modules/administration/usecases/sessions.jx">
+        <tab group="admin" name="sessions"/>
+      </view>
+      <exit usecase="admin.sessions"/>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.cms.publication.usecases.EditPubConf" logger="lenya.admin" name="admin.showPubConf">
+    <view createContinuation="false" menu="true" uri="modules/administration/usecases/showPubConf.jx">
+      <tab group="admin" name="pubConf"/>
+    </view>
+  </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.site.usecases.SiteOverview" logger="lenya.admin" name="admin.siteOverview">
+      <view createContinuation="false" menu="true" uri="modules/administration/usecases/siteOverview.jx">
+        <tab group="admin" name="siteOverview"/>
+      </view>
+      <exit usecase="admin.siteOverview"/>
+    </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.Usecases" logger="lenya.admin" name="admin.usecases">
+      <view menu="true" uri="modules/administration/usecases/usecases.jx">
+        <tab group="admin" name="usecases"/>
+      </view>
+      <exit usecase="admin.usecases"/>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.User" logger="lenya.admin" name="admin.user">
+      <view menu="true" uri="modules/administration/usecases/user.jx">
+        <tab group="admin" name="users"/>
+      </view>
+      <exit usecase="admin.users"/>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.UserGroups" logger="lenya.admin" name="admin.userGroups">
+      <view menu="true" uri="modules/administration/usecases/userGroups.jx">
+        <tab group="admin" name="users"/>
+      </view>
+      <exit usecase="admin.user">
+        <parameter name="userId"/>
+      </exit>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.UserProfile" logger="lenya.admin" name="admin.userProfile">
+      <view menu="true" uri="modules/administration/usecases/userProfile.jx">
+        <tab group="admin" name="users"/>
+      </view>
+      <exit usecase="admin.user">
+        <parameter name="userId"/>
+      </exit>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.ac.usecases.Users" logger="lenya.admin" name="admin.users">
+      <view menu="true" uri="modules/administration/usecases/users.jx">
+        <tab group="admin" name="users"/>
+      </view>
+      <exit usecase="admin.users"/>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.inbox.usecases.Inbox" logger="lenya.notification" name="notification.inbox">
+      <view menu="true" uri="modules/notification/usecases/inbox.jx">
+        <tab group="admin" name="inbox"/>
+      </view>
+      <exit usecase="notification.inbox"/>
+    </component-instance>
+
+
+
+    <component-instance class="org.apache.lenya.inbox.usecases.SendMessage" logger="lenya.notification" name="notification.sendMessage">
+      <view menu="true" uri="modules/notification/usecases/sendMessage.jx">
+        <tab group="admin" name="inbox"/>
+      </view>
+      <exit usecase="notification.inbox"/>
+    </component-instance>
+
+
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.MultiWorkflow" logger="lenya.workflow" name="workflow.multiWorkflow">
+      <view createContinuation="false" menu="true" uri="modules/workflow/usecases/multiWorkflow.jx"/>
+      <exit usecase="workflow.multiWorkflow"/>
+      <variable name="is_live"/>
+      <usecase event="submit" name="workflow.submit"/>
+      <usecase event="reject" name="workflow.reject"/>
+      <usecase event="publish" name="workflow.publish"/>
+      <usecase event="deactivate" name="workflow.deactivate"/>
+      <usecase event="delete" name="sitemanagement.delete"/>
+      <usecase event="archive" name="sitemanagement.archive"/>
+      <usecase event="restore" name="sitemanagement.restore"/>
+      <parameter name="style" value="text"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.MultiWorkflowInvoke" logger="lenya.workflow" name="workflow.multiWorkflowInvoke">
+      <exit usecase="workflow.multiWorkflow"/>
+    </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.Deactivate" logger="lenya.usecases.workflow" name="workflow.deactivate">
+      <view uri="modules/workflow/usecases/deactivate.jx"/>
+      <event id="deactivate"/>
+    </component-instance>
+
+  
+
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.Publish" logger="lenya.usecases.workflow" name="workflow.publish">
+      <view uri="modules/workflow/usecases/publish.jx"/>
+      <event id="publish"/>
+    </component-instance>
+
+  
+                        
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.Reject" logger="lenya.usecases.workflow" name="workflow.reject">
+      <event id="reject"/>
+      <view uri="modules/workflow/usecases/reject.jx"/>
+    </component-instance>
+
+  
+
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.Submit" logger="lenya.usecases.workflow" name="workflow.submit">
+      <event id="submit"/>
+      <view uri="modules/workflow/usecases/submit.jx"/>
+    </component-instance>
+
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Archive" logger="lenya.site" name="sitemanagement.archive">
+      <view uri="modules/sitemanagement/usecases/site/archive.jx"/>
+      <exit usecase="tab.overview"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.ChangeLabel" logger="lenya.site" name="sitemanagement.changeLabel">
+      <view uri="modules/sitemanagement/usecases/site/changeLabel.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.ChangeNodeID" logger="lenya.site" name="sitemanagement.changeNodeID">
+      <view uri="modules/sitemanagement/usecases/site/changeNodeID.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.ChangeVisibility" logger="lenya.site" name="sitemanagement.changeVisibility"/>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Copy" logger="lenya.site" name="sitemanagement.copy">
+      <view uri="modules/sitemanagement/usecases/site/copy.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.CreateDocument" logger="lenya.site" name="sitemanagement.create">
+      <view uri="modules/sitemanagement/usecases/site/create.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.CreateLanguage" logger="lenya.site" name="sitemanagement.createLanguage">
+      <view uri="modules/sitemanagement/usecases/site/createLanguage.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Cut" logger="lenya.site" name="sitemanagement.cut">
+      <view uri="modules/sitemanagement/usecases/site/cut.jx"/>
+      <exit usecase="tab.overview"/>  
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Delete" logger="lenya.site" name="sitemanagement.delete">
+      <view uri="modules/sitemanagement/usecases/site/delete.jx"/>
+      <exit usecase="tab.overview"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.DeleteLanguage" logger="lenya.site" name="sitemanagement.deleteLanguage">
+      <view uri="modules/sitemanagement/usecases/site/deleteLanguage.jx"/>
+    </component-instance>
+  
+  <component-instance class="org.apache.lenya.cms.site.usecases.ForceCheckIn" logger="lenya.site" name="sitemanagement.forceCheckIn">
+    <view uri="modules/sitemanagement/usecases/site/forceCheckIn.jx"/>
+  </component-instance>
+
+    <component-instance class="org.apache.lenya.cms.site.usecases.Paste" logger="lenya.site" name="sitemanagement.paste">
+      <view uri="modules/sitemanagement/usecases/site/paste.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Restore" logger="lenya.site" name="sitemanagement.restore">
+      <view uri="modules/sitemanagement/usecases/site/restore.jx"/>
+      <exit usecase="tab.overview"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Rollback" logger="lenya.site" name="sitemanagement.rollback">
+      <parameter name="workflowEvent" value="edit"/>
+      <exit usecase="tab.revisions"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AccessControl" logger="lenya.site" name="tab.acArchive">
+      <view menu="true" uri="modules/sitemanagement/usecases/tab/acArchive.jx">
+        <tab group="site" name="acArchive"/>
+      </view>
+      <parameter name="acArea" value="archive"/>
+      <exit usecase="tab.acArchive"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AccessControl" logger="lenya.site" name="tab.acAuthoring">
+      <view menu="true" uri="modules/sitemanagement/usecases/tab/acAuthoring.jx">
+        <tab group="site" name="acAuthoring"/>
+      </view>
+      <parameter name="acArea" value="authoring"/>
+      <exit usecase="tab.acAuthoring"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AccessControl" logger="lenya.site" name="tab.acLive">
+      <view menu="true" uri="modules/sitemanagement/usecases/tab/acLive.jx">
+        <tab group="site" name="acLive"/>
+      </view>
+      <parameter name="acArea" value="live"/>
+      <exit usecase="tab.acLive"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.ac.usecases.AccessControl" logger="lenya.site" name="tab.acTrash">
+      <view menu="true" uri="modules/sitemanagement/usecases/tab/acTrash.jx">
+        <tab group="site" name="acTrash"/>
+      </view>
+      <parameter name="acArea" value="trash"/>
+      <exit usecase="tab.acTrash"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Assets" logger="lenya.site" name="tab.assets">
+      <view createContinuation="false" menu="true" uri="modules/sitemanagement/usecases/tab/assets.jx">
+        <tab group="site" name="assets"/>
+      </view>
+      <exit usecase="tab.assets"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.metadata.usecases.Metadata" logger="lenya.site" name="tab.meta">
+      <view createContinuation="false" menu="true" uri="modules/sitemanagement/usecases/tab/meta.jx">
+        <tab group="site" name="meta"/>
+      </view>
+      <exit usecase="tab.meta"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Overview" logger="lenya.site" name="tab.overview">
+      <view createContinuation="false" menu="true" uri="modules/sitemanagement/usecases/tab/overview.jx">
+        <tab group="site" name="overview"/>
+      </view>
+      <exit usecase="tab.overview"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.Revisions" logger="lenya.site" name="tab.revisions">
+      <view createContinuation="false" menu="true" uri="modules/sitemanagement/usecases/tab/revisions.jx">
+        <tab group="site" name="revisions"/>
+      </view>
+      <parameter name="workflowEvent" value="edit"/>
+      <exit usecase="tab.revisions"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.usecase.scheduling.ManageJobs" logger="lenya.site" name="tab.scheduler">
+      <view menu="true" uri="modules/sitemanagement/usecases/tab/scheduler.jx">
+        <tab group="site" name="scheduler"/>
+      </view>
+      <exit usecase="tab.scheduler"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.History" logger="lenya.site" name="tab.workflow">
+      <view createContinuation="false" menu="true" uri="modules/sitemanagement/usecases/tab/workflow.jx">
+        <tab group="site" name="workflow"/>
+      </view>
+      <exit usecase="tab.workflow"/>
+    </component-instance>
+  
+
+    <component-instance class="org.apache.lenya.cms.site.usecases.Delete" logger="lenya.usecases.delete" name="webdav.delete">
+    </component-instance>
+
+  
+
+    <component-instance class="org.apache.lenya.cms.usecases.webdav.FilePropfind" logger="lenya.publication" name="webdav.filePropfind">
+      <view uri="usecases/webdav/filePropfind"/>
+    </component-instance>
+
+  
+    <component-instance class="org.apache.lenya.cms.usecases.webdav.Mkcol" logger="lenya.publication" name="webdav.mkcol">
+      <!-- You can configure which resource type and extension the 
+        creation of a webdav collection will trigger in lenya. -->
+      <extension resource-type="xhtml">xml</extension>
+    </component-instance>
+    
+  
+
+    <component-instance class="org.apache.lenya.cms.usecases.webdav.Propfind" logger="lenya.publication" name="webdav.propfind">
+      <view uri="usecases/webdav/propfind"/>
+    </component-instance>
+
+  
+    <component-instance class="org.apache.lenya.cms.usecases.webdav.Put" logger="lenya.publication" name="webdav.put">
+      <!-- You can configure which resource type and extension are connected.
+        The idea is similar to the file system browser dialog that an operation system
+        offers (open with) where you can register applications to open certain file extensions-->
+      <extensions>
+        <extension resource-type="xhtml">xml</extension>
+        <extension resource-type="opendocument">odt</extension>
+        <extension resource-type="xhtml">html</extension>
+        <extension resource-type="xhtml">xhtml</extension>
+        <!--Next extension is a wildcard (all others)-->
+        <extension resource-type="xhtml">*</extension>
+      </extensions>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.CreateResource" logger="lenya.site" name="resource.create">
+      <view uri="modules/resource/usecases/create-resource.jx"/>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.cms.site.usecases.UploadResource" logger="lenya.module.resource" name="resource.upload">
+    <view uri="modules/resource/usecases/upload-resource.jx"/>
+    <event id="edit"/>
+  </component-instance>
+  
+
+    
+    <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.publication" name="bxe.close">
+      <view createContinuation="false" menu="false" uri="/modules/bxe/bxe.close"/>
+    </component-instance>
+    
+  
+    
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.InvokeWorkflow" logger="lenya.publication" name="bxe.edit">
+      <view createContinuation="false" menu="false" uri="modules/bxe/usecases/bxe.jx"/>
+      <transaction policy="pessimistic"/>
+      <event id="edit"/>
+      <parameter name="checkoutRestrictedToSession" value="false"/>
+    </component-instance>
+    
+  
+    <component-instance class="org.apache.lenya.blog.cms.usecases.Delete" logger="lenya.usecases.workflow" name="blog/workflow.delete">
+      <view uri="modules/blog/usecases/workflow/delete.jx"/>
+    </component-instance>
+
+  
+  <component-instance class="org.apache.lenya.cms.site.usecases.CreateBlogEntry" logger="lenya.site" name="blog.createEntry">
+    <view uri="modules/blog/usecases/site/create.jx"/>
+  </component-instance>
+
+    <component-instance class="org.apache.lenya.blog.cms.usecases.Deactivate" logger="lenya.usecases.workflow" name="blog/workflow.deactivate">
+      <view uri="modules/blog/usecases/workflow/deactivate.jx"/>
+    </component-instance>
+
+  
+  <component-instance class="org.apache.lenya.blog.cms.usecases.Publish" logger="lenya.workflow" name="blog/workflow.publish">
+    <view uri="modules/blog/usecases/workflow/publish.jx"/>
+  </component-instance>
+
+    
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.InvokeWorkflow" logger="lenya.publication" name="kupu.edit">
+      <view createContinuation="false" menu="false" uri="modules/kupu/usecases/kupu.jx"/>
+      <transaction policy="pessimistic"/>
+      <event id="edit"/>
+      <parameter name="checkoutRestrictedToSession" value="false"/>
+    </component-instance>
+    
+  
+    
+    <component-instance class="org.apache.lenya.modules.news.usecases.Edit" logger="lenya.news" name="news.edit">
+      <view menu="false" uri="modules/news/usecases/edit.jx"/>
+      <event id="edit"/>
+    </component-instance>
+    
+  
+    <component-instance class="org.apache.lenya.cms.site.usecases.CreateUsecaseDocument" logger="lenya.site" name="usecasedocument.create">
+      <view uri="modules/usecasedocument/usecases/createUsecaseDocument.jx"/>
+    </component-instance>
+  
+  <component-instance class="org.apache.lenya.cms.site.usecases.CreateResource" logger="lenya.site" name="editors.createResource">
+    <view menu="false" uri="modules/resource/usecases/create-resource.jx"/>
+  </component-instance>
+
+    <component-instance class="org.apache.lenya.cms.editors.forms.FormsEditor" logger="lenya.publication" name="editors.forms">
+      <transaction policy="pessimistic"/>
+      <view menu="false" uri="modules/editors/usecases/forms/forms.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.editors.forms.OneFormEditor" logger="lenya.publication" name="editors.oneform">
+      <transaction policy="pessimistic"/>
+      <view menu="false" uri="modules/editors/usecases/forms/oneform.jx"/>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.cms.editors.InsertAsset" logger="lenya.publication" name="editors.insertAsset">
+    <view createContinuation="false" menu="false" template="modules/editors/usecases/insertAsset.jx"/>
+    <parameter name="mode" value="Asset"/>
+    <parameter name="asset-usecase" value="tab.asset"/>
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.editors.InsertAsset" logger="lenya.publication" name="editors.insertImage">
+    <view createContinuation="false" menu="false" template="modules/editors/usecases/insertAsset.jx"/>
+    <parameter name="mode" value="Image"/>
+    <parameter name="asset-usecase" value="tab.asset"/>
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.publication" name="editors.insertLink">
+    <view createContinuation="false" menu="false" uri="cocoon://modules/editors/editors.insertLink"/>
+  </component-instance>
+
+
+    <component-instance class="org.apache.lenya.cms.editors.EditDocument" logger="lenya.publication" name="editors.publicationEdit">
+      <parameter name="sourceUri" value="cocoon://modules/editors/stream.xml"/>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.cms.editors.fckeditor.Fckeditor" logger="lenya.publication" name="fckeditor.edit">
+    <transaction policy="pessimistic"/>
+    <parameter name="tidyConfig" value="fallback://lenya/modules/fckeditor/config/jtidy.properties"/> 
+    <view menu="false" uri="/modules/fckeditor/fckeditor.open"/>
+    <event id="edit"/>
+    <parameter name="checkoutRestrictedToSession" value="false"/>
+  </component-instance>
+    
+
+
+  <component-instance class="org.apache.lenya.cms.site.usecases.Nudge" logger="lenya.site" name="sitetree.nudge"/>
+  
+
+
+  <component-instance class="org.apache.lenya.cms.editors.tinymce.TinyMce" logger="lenya.publication" name="tinymce.edit">
+    <transaction policy="pessimistic"/>
+    <view menu="false" uri="/modules/tinymce/tinymce.edit"/>
+  </component-instance>
+    
+
+  <component-instance class="org.apache.lenya.cms.editors.cforms.CForms" logger="lenya.site" name="cforms.edit">
+    <view customFlow="fallback://lenya/modules/cforms/flow/customFlow.js" uri="modules/cforms/usecases/dynamicrepeater_template.xml"/>
+    <event id="edit"/>
+  </component-instance>
+
+    <component-instance class="org.apache.lenya.cms.export.Import" logger="lenya.export" name="export.import">
+      <view menu="false" uri="modules/export/usecases/import.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.export.Import" logger="lenya.export" name="export.importExampleContent">
+      <view menu="false" uri="modules/export/usecases/importExampleContent.jx"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.editors.SaveDocument" logger="lenya.neutron" name="neutron.checkin">
+      <parameter name="sourceUri" value="cocoon://modules/editors/stream.xml"/>
+      <parameter name="usecaseName" value="editors.publicationEdit"/>
+      <view uri="/modules/neutron/load.xml"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.workflow.usecases.InvokeWorkflow" logger="lenya.neutron" name="neutron.checkout">
+      <view createContinuation="false" menu="false" uri="modules/neutron/usecases/neutron.jx"/>
+      <transaction policy="pessimistic"/>
+      <event id="edit"/>
+    </component-instance>
+  
+
+  <component-instance class="org.apache.lenya.cms.site.usecases.CreateOpenDocument" logger="lenya.module.odt" name="opendocument.create">
+    <view uri="modules/sitemanagement/usecases/site/create.jx"/>
+  </component-instance>
+  
+
+
+  <component-instance class="org.apache.lenya.cms.site.usecases.UploadOpenDocument" logger="lenya.module.odt" name="opendocument.upload">
+    <view uri="modules/opendocument/usecases/upload.jx"/>
+    <event id="edit"/>
+  </component-instance>
+  
+
+
+    <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.lucene" name="lucene.externalOpensearch">
+      <view uri="modules/lucene/usecases/lucene/externalOpensearch.jx"/>
+      <exit usecase="lucene.externalOpensearch"/>
+    </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.lucene.IndexDocument" logger="lenya.usecases.lucene-org.apache.lenya.cms.lucene.IndexDocument" name="lucene.index">
+  </component-instance>
+
+
+
+  <component-instance class="org.apache.lenya.cms.lucene.IndexSite" logger="lenya.usecases.lucene-org.apache.lenya.cms.lucene.IndexSite" name="lucene.indexSite">
+    <view uri="modules/lucene/usecases/indexSite.jx"/>
+  </component-instance>
+
+
+
+    <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.lucene" name="lucene.opensearch">
+      <view uri="modules/lucene/usecases/lucene/opensearch.jx"/>
+      <exit usecase="lucene.opensearch"/>
+    </component-instance>
+    
+
+
+    <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.lucene" name="lucene.search">
+      <view uri="modules/lucene/usecases/lucene/search.jx"/>
+      <exit usecase="lucene.search"/>
+    </component-instance>
+
+
+
+    <component-instance class="org.apache.lenya.cms.usecase.DummyUsecase" logger="lenya.linkcheck" name="linkcheck.getLinks">
+      <view uri="modules/linkcheck/usecases/linkcheck/getLinks.jx"/>
+    </component-instance>
+
+
+
+    <component-instance class="org.apache.lenya.cms.contactform.ContactForm" logger="lenya.usecase" name="contactform.sendMessage">
+      <view uri="modules/contactform/usecases/contactForm.jx"/>
+      <parameter name="sender" value="lenya"/>
+      <parameter name="recipient" value="alice"/>
+    </component-instance>
+    
+  
+    <component-instance class="org.apache.lenya.modules.metadata.ChangeMetaData" logger="lenya.metadata" name="metadata.change">
+      <view createContinuation="false" uri="cocoon://modules/metadata/change"/>
+      <event id="edit"/>
+    </component-instance>
+  
+    <component-instance class="org.apache.lenya.cms.publication.usecases.CreatePublicationFromTemplate" logger="lenya.publication" name="templating.createPublicationFromTemplate">
+      <view uri="modules/templating/usecases/createPublicationFromTemplate.jx"/>
+    </component-instance>
+  </usecases>
+  
+    <component class="org.apache.lenya.cms.usecase.scheduling.impl.UsecaseSchedulerImpl" logger="lenya.usecase" role="org.apache.lenya.cms.usecase.scheduling.UsecaseScheduler"/>
+  
+
+  <component class="org.apache.lenya.inbox.xml.XmlSourceInboxManager" logger="lenya.inbox" role="org.apache.lenya.inbox.InboxManager"/>
+  
+
+
+  <component class="org.apache.lenya.notification.NotificationListener" logger="lenya.notification" role="org.apache.lenya.notification.NotificationListener"/>
+  
+
+
+  <component class="org.apache.lenya.inbox.InboxNotifier" logger="lenya.notification" role="org.apache.lenya.notification.Notifier"/>
+
+  <!-- Use the following configuration to send e-mail notifications -->
+  <!--
+  <component logger="lenya.notification"
+    role="org.apache.lenya.notification.Notifier"
+    class="org.apache.lenya.notification.EmailNotifier">
+    
+    <smtp host="localhost"/>
+    
+    <!- use this for authentication
+    <smtp host="localhost" username="john" password="swordfish" />
+    ->
+    
+  </component>
+  -->
+  
+
+
+  <component class="org.apache.lenya.modules.svg.ProtocolHandler" logger="lenya.modules.svg" role="org.apache.lenya.modules.svg.SiteProtocolHandler">
+    <parameter name="protocol" value="site"/>
+  </component>
+
+  <component class="org.apache.lenya.modules.svg.ProtocolHandler" logger="lenya.modules.svg" role="org.apache.lenya.modules.svg.LenyaDocumentProtocolHandler">
+    <parameter name="protocol" value="lenya-document"/>
+  </component>
+  
+
+  <component class="org.apache.excalibur.store.impl.MRUMemoryStore" logger="lenya.source.navigation.store" role="org.apache.lenya.modules.navigation.SiteMetaDataTransformerStore">
+    <parameter name="maxobjects" value="10000"/>
+  </component>
+
+  <component class="org.apache.lenya.cms.repository.SourceNodeFactory" logger="lenya.nodefactory.source" role="org.apache.lenya.cms.repository.NodeFactory"/>
+
+
+	<analyzer_manager logger="core.search.analyzer_manager">
+		<analyzer class="org.apache.lucene.analysis.standard.StandardAnalyzer" id="standard"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Danish_da.xml" id="stopword_da"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Dutch_nl.xml" id="stopword_nl"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/English_en.xml" id="stopword_en"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Finnish_fi.xml" id="stopword_fi"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/French_fr.xml" id="stopword_fr"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/German_de.xml" id="stopword_de"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Italian_it.xml" id="stopword_it"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Norwegian_no.xml" id="stopword_no"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Polish_pl.xml" id="stopword_pl"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Portuguese_pt.xml" id="stopword_pt"/>
+	  <!--
+	  <analyzer id="stopword_ru" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Russian_ru.xml" checkupdate="true"/>
+	  -->
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Spanish_es.xml" id="stopword_es"/>
+	  <analyzer checkupdate="true" class="org.apache.cocoon.components.search.analyzer.ConfigurableStopwordAnalyzer" configfile="context://WEB-INF/analyzer/stopword/Swedish_sv.xml" id="stopword_sv"/>
+	  <analyzer checkupdate="false" class="org.apache.cocoon.components.search.analyzer.ConfigurablePerFieldAnalyzer" configfile="context://WEB-INF/analyzer/perfieldconf.xml" id="analyzer_research"/>
+	</analyzer_manager>
+	
+
+
+<!-- default indexer component -->	
+	<default_indexer logger="core.search.default_indexer">
+		<!-- number of lucene documents in the buffer -->
+		<buffersize>200</buffersize>
+	</default_indexer>
+	
+
+  <!-- if-prop="patch.webapp" -->
+  
+  <component class="org.apache.lenya.cms.lucene.IndexUpdaterImpl" logger="lucene.indexupdater" role="org.apache.lenya.cms.lucene.IndexUpdater"/>
+	
+
+
+	<index_manager logger="core.search.index_manager">
+		
+		<indexer role="org.apache.cocoon.components.search.components.Indexer/default"/>
+		
+	</index_manager>
+
+
+
+  <component class="org.apache.lenya.modules.lucene.impl.MetaDataFieldRegistryImpl" role="org.apache.lenya.modules.lucene.MetaDataFieldRegistry"/>
+
+
+
+<!-- parallel indexer component -->		
+	<parallel_indexer logger="core.search.parallel_indexer">
+		<!-- number of thread (normaly = number of CPUs) -->
+		<numthread>2</numthread>
+	</parallel_indexer>
+	
+
+  <component class="org.apache.lenya.cms.metadata.MetaDataCache" logger="lenya.metadata.cache" role="org.apache.lenya.cms.metadata.MetaDataCache"/>
+  <component class="org.apache.excalibur.store.impl.MRUMemoryStore" logger="lenya.metadata.cache" role="org.apache.lenya.cms.metadata.MetaDataCacheStore">
+    <parameter name="maxobjects" value="10000"/>
+  </component>
+
+    <component class="org.apache.lenya.cms.observation.ObservationManager" logger="lenya.observation.registry" role="org.apache.lenya.cms.observation.ObservationRegistry"/>
+  
+    <component class="org.apache.lenya.cms.observation.RepositoryLogger" logger="lenya.observation.repositorylogger" role="org.apache.lenya.cms.observation.RepositoryLogger"/>
+  
+  
+  <component class="org.apache.lenya.cms.janitor.ContentJanitor" logger="content-janitor" role="org.apache.lenya.cms.janitor.ContentJanitor"/>
+	
+
+    <component class="org.apache.lenya.cms.publication.templating.PublicationTemplateManagerImpl" logger="lenya.publication.templatemanager" role="org.apache.lenya.cms.publication.templating.PublicationTemplateManager"/>
+  </cocoon>
