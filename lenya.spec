@@ -52,18 +52,18 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_sharedstatedir}/{lenya,tomcat/conf/Catalina/localhost},/var/log/lenya}
 install %{SOURCE1} $RPM_BUILD_ROOT%{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
 cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/lenya
+
+# use libraries provided by lenya. Lenya need exact version of these jars.
+# Don't try to use system libraries. It won't work.
+mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib{/endorsed/*,}
+rmdir $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib/endorsed
+
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/log4j.xconf
 cp %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/cocoon.xconf
 cp %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/web.xml
 mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/{*conf,*xml,*properties} $RPM_BUILD_ROOT%{_sysconfdir}/lenya
 for I in $RPM_BUILD_ROOT%{_sysconfdir}/lenya/*; do
   ln -sf %{_sysconfdir}/lenya/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/
-done
-
-required_jars="bcel regexp xalan xercesImpl xml-apis"
-for I in $required_jars; do
-  jar=$(find-jar $I)
-  ln -s $jar $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib
 done
 
 %clean
