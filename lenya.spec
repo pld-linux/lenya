@@ -12,6 +12,9 @@ Source0:	http://ftp.tpnet.pl/vol/d1/apache/lenya/SOURCES/apache-%{name}-%{versio
 # Source0-md5:	7e600d88ad6c866b5eda30d6d0133d11
 Source1:	%{name}-context.xml
 Source2:	%{name}-log4j.xconf
+Source3:	%{name}-cocoon.xconf
+Source4:	%{name}-web.xml
+Source5:	${name}-mysql-schema.sql
 URL:		http://lenya.apache.org/
 BuildRequires:	jpackage-utils
 BuildRequires:	rpm-javaprov
@@ -28,6 +31,8 @@ search, WYSIWYG editors, and workflow.
 
 %prep
 %setup -q -n apache-%{name}-%{version}-src
+
+cp %{SOURCE5} mysql-schema.sql
 
 %build
 required_jars="bcel regexp xalan xercesImpl xml-apis"
@@ -48,6 +53,8 @@ install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_sharedstatedir}/{
 install %{SOURCE1} $RPM_BUILD_ROOT%{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
 cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/lenya
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/log4j.xconf
+cp %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/cocoon.xconf
+cp %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/web.xml
 mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/{*conf,*xml,*properties} $RPM_BUILD_ROOT%{_sysconfdir}/lenya
 for I in $RPM_BUILD_ROOT%{_sysconfdir}/lenya/*; do
   ln -sf %{_sysconfdir}/lenya/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/
@@ -64,6 +71,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
+%doc mysql-schema.sql
 %dir %{_sysconfdir}/lenya
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lenya/*
 %config(noreplace) %verify(not md5 mtime size) %{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
