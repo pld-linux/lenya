@@ -1,5 +1,4 @@
 # TODO:
-# - some directories should be writeable for tomcat. Which one? Move them to /var/lib/lenya
 # - where to setup lenya username/passwords? Is it possible to integrate it
 #   with LDAP?
 
@@ -8,7 +7,7 @@ Summary:	Open Source Java/XML Content Management System
 Summary:(pl.UTF-8)	System zarządzania treścią oparty na Javie i XML
 Name:		lenya
 Version:	2.0.2
-Release:	0.2
+Release:	1
 License:	Apache v2
 Group:		Networking/Daemons/Java/Servlets
 Source0:	http://ftp.tpnet.pl/vol/d1/apache/lenya/SOURCES/apache-%{name}-%{version}-src.tar.gz
