@@ -87,5 +87,5 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lenya/*
 %config(noreplace) %verify(not md5 mtime size) %{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
 %{_datadir}/lenya
-%attr(2775,root,servlet) %{_sharedstatedir}/lenya
+%config(noreplace) %verify(not md5 mtime size) %attr(2775,root,servlet) %{_sharedstatedir}/lenya
 %attr(2775,root,servlet) %dir /var/log/lenya
