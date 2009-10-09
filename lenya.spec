@@ -19,6 +19,8 @@ Source3:	%{name}-cocoon.xconf
 Source4:	%{name}-web.xml
 Source5:	%{name}-mysql-schema.sql
 URL:		http://lenya.apache.org/
+BuildRequires:	ant
+BuildRequires:	java-sun
 BuildRequires:	jpackage-utils
 BuildRequires:	rpm-javaprov
 BuildRequires:	rpmbuild(macros) >= 1.300
@@ -44,9 +46,6 @@ definiowania procedury workflow.
 cp %{SOURCE5} mysql-schema.sql
 
 %build
-# use bundled ant, because it does need ant < 1.7.0
-export ANT_HOME=tools
-
 # some libs
 CLASSPATH=$(build-classpath-directory externals/cocoon_2_1_x/lib/endorsed)
 CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/ant-contrib-0.6.jar
