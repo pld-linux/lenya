@@ -8,7 +8,7 @@ Summary:	Open Source Java/XML Content Management System
 Summary:(pl.UTF-8)	System zarządzania treścią oparty na Javie i XML
 Name:		lenya
 Version:	2.0.2
-Release:	0.1
+Release:	0.2
 License:	Apache v2
 Group:		Networking/Daemons/Java/Servlets
 Source0:	http://ftp.tpnet.pl/vol/d1/apache/lenya/SOURCES/apache-%{name}-%{version}-src.tar.gz
@@ -58,7 +58,7 @@ CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/jing-20030619.jar
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_sharedstatedir}/{lenya,tomcat/conf/Catalina/localhost},/var/log/lenya}
+install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_sharedstatedir}/tomcat/conf/Catalina/localhost,/var/log/lenya}
 install %{SOURCE1} $RPM_BUILD_ROOT%{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
 cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/lenya
 mv $RPM_BUILD_ROOT%{_datadir}/lenya/lenya $RPM_BUILD_ROOT%{_sharedstatedir}/lenya
