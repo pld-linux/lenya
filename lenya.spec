@@ -46,6 +46,9 @@ definiowania procedury workflow.
 cp %{SOURCE5} mysql-schema.sql
 
 %build
+
+export ANT_HOME=tools
+
 # some libs
 CLASSPATH=$(build-classpath-directory externals/cocoon_2_1_x/lib/endorsed)
 CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/ant-contrib-0.6.jar
@@ -58,6 +61,8 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_sharedstatedir}/{lenya,tomcat/conf/Catalina/localhost},/var/log/lenya}
 install %{SOURCE1} $RPM_BUILD_ROOT%{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
 cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/lenya
+mv $RPM_BUILD_ROOT%{_datadir}/lenya/lenya $RPM_BUILD_ROOT%{_sharedstatedir}/lenya
+ln -s %{_sharedstatedir}/lenya $RPM_BUILD_ROOT%{_datadir}/lenya
 
 # use libraries provided by lenya. Lenya need exact version of these jars.
 # Don't try to use system libraries. It won't work.
@@ -82,5 +87,5 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lenya/*
 %config(noreplace) %verify(not md5 mtime size) %{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
 %{_datadir}/lenya
-%attr(2775,root,servlet) %dir %{_sharedstatedir}/lenya
+%attr(2775,root,servlet) %{_sharedstatedir}/lenya
 %attr(2775,root,servlet) %dir /var/log/lenya
