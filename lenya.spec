@@ -5,6 +5,7 @@
 
 %include	/usr/lib/rpm/macros.java
 Summary:	Open Source Java/XML Content Management System
+Summary:(pl.UTF-8)	System zarządzania treścią oparty na Javie i XML
 Name:		lenya
 Version:	2.0.2
 Release:	0.1
@@ -30,6 +31,12 @@ BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 Apache Lenya is an Open Source Java/XML Content Management System and
 comes with revision control, multi-site management, scheduling,
 search, WYSIWYG editors, and workflow.
+
+%description -l pl.UTF-8
+Apache Lenya jest napisanym w Javie systemem zarządzania treścią
+intensywnie wykorzystującym XML. Lenya zawiera system kontroli wersji,
+edytor WYSIWYG, możliwość zarządzania wieloma publikacjami,
+definiowania procedury workflow.
 
 %prep
 %setup -q -n apache-%{name}-%{version}-src
