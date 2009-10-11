@@ -4,7 +4,7 @@
 
 %include	/usr/lib/rpm/macros.java
 Summary:	Open Source Java/XML Content Management System
-Summary:(pl.UTF-8)	System zarządzania treścią oparty na Javie i XML
+Summary(pl.UTF-8):	System zarządzania treścią oparty na Javie i XML
 Name:		lenya
 Version:	2.0.2
 Release:	1
