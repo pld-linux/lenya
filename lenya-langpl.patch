@@ -1,0 +1,10 @@
+--- apache-lenya-2.0.2-src/src/pubs/default/config/publication.xml~	2008-08-25 16:31:12.000000000 +0200
++++ apache-lenya-2.0.2-src/src/pubs/default/config/publication.xml	2009-10-12 15:06:38.000000000 +0200
+@@ -35,6 +35,7 @@
+     <language>he</language>
+     <language>es</language>
+     <language>fr</language>
++    <language>pl</language>
+   </languages>
+   <!-- A template instantiator is used to create new publications based on this one. -->
+   <template-instantiator name="default"/>
