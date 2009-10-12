@@ -17,6 +17,9 @@ Source2:	%{name}-log4j.xconf
 Source3:	%{name}-cocoon.xconf
 Source4:	%{name}-web.xml
 Source5:	%{name}-mysql-schema.sql
+# From http://en.wikipedia.org/wiki/File:Flag_of_Poland.svg
+Source6:	%{name}-pl.svg
+Patch0:		%{name}-langpl.patch
 URL:		http://lenya.apache.org/
 BuildRequires:	ant
 BuildRequires:	java-sun
@@ -41,6 +44,8 @@ definiowania procedury workflow.
 
 %prep
 %setup -q -n apache-%{name}-%{version}-src
+
+%patch0 -p1
 
 cp %{SOURCE5} mysql-schema.sql
 
@@ -71,6 +76,7 @@ rmdir $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib/endorsed
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/log4j.xconf
 cp %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/cocoon.xconf
 cp %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/web.xml
+cp %{SOURCE6} $RPM_BUILD_ROOT%{_sharedstatedir}/lenya/modules/languageselector/resources/images/pl.svg
 mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/{*conf,*xml,*properties} $RPM_BUILD_ROOT%{_sysconfdir}/lenya
 for I in $RPM_BUILD_ROOT%{_sysconfdir}/lenya/*; do
   ln -sf %{_sysconfdir}/lenya/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/
