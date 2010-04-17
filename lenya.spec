@@ -22,10 +22,11 @@ Source6:	%{name}-pl.svg
 Patch0:		%{name}-langpl.patch
 URL:		http://lenya.apache.org/
 BuildRequires:	ant
-BuildRequires:	java-sun
+BuildRequires:	jdk
 BuildRequires:	jpackage-utils
 BuildRequires:	rpm-javaprov
 BuildRequires:	rpmbuild(macros) >= 1.300
+BuildConflicts:	java-gcj-compat
 Requires:	group(servlet)
 Requires:	jpackage-utils
 BuildArch:	noarch
