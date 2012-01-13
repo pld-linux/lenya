@@ -6,12 +6,12 @@
 Summary:	Open Source Java/XML Content Management System
 Summary(pl.UTF-8):	System zarządzania treścią oparty na Javie i XML
 Name:		lenya
-Version:	2.0.2
+Version:	2.0.4
 Release:	1
 License:	Apache v2
 Group:		Networking/Daemons/Java/Servlets
 Source0:	http://ftp.tpnet.pl/vol/d1/apache/lenya/SOURCES/apache-%{name}-%{version}-src.tar.gz
-# Source0-md5:	7e600d88ad6c866b5eda30d6d0133d11
+# Source0-md5:	ed55349020db581e4883b1942f4bbd27
 Source1:	%{name}-context.xml
 Source2:	%{name}-log4j.xconf
 Source3:	%{name}-cocoon.xconf
@@ -45,19 +45,19 @@ definiowania procedury workflow.
 
 %prep
 %setup -q -n apache-%{name}-%{version}-src
-
 %patch0 -p1
-
 cp %{SOURCE5} mysql-schema.sql
 
 %build
-
 export ANT_HOME=tools
 
 # some libs
 CLASSPATH=$(build-classpath-directory externals/cocoon_2_1_x/lib/endorsed)
 CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/ant-contrib-0.6.jar
 CLASSPATH=$CLASSPATH:externals/cocoon_2_1_x/tools/lib/jing-20030619.jar
+
+chmod 700 ./build.sh
+./build.sh clean-all
 
 %ant webapp
 
