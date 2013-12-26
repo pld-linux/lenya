@@ -63,24 +63,24 @@ chmod 700 ./build.sh
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_tomcatconfdir},%{_sharedstatedir},/var/log/lenya}
+install -d $RPM_BUILD_ROOT{%{_sysconfdir}/%{name},%{_datadir},%{_tomcatconfdir},%{_sharedstatedir},/var/log/%{name}}
 cp -p %{SOURCE1} $RPM_BUILD_ROOT%{_tomcatconfdir}/lenya.xml
-cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/lenya
-mv $RPM_BUILD_ROOT%{_datadir}/lenya/lenya $RPM_BUILD_ROOT%{_sharedstatedir}
-ln -s %{_sharedstatedir}/lenya $RPM_BUILD_ROOT%{_datadir}/lenya
+cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/%{name}
+mv $RPM_BUILD_ROOT%{_datadir}/%{name}/lenya $RPM_BUILD_ROOT%{_sharedstatedir}
+ln -s %{_sharedstatedir}/%{name} $RPM_BUILD_ROOT%{_datadir}/%{name}
 
 # use libraries provided by lenya. Lenya need exact version of these jars.
 # Don't try to use system libraries. It won't work.
-mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib{/endorsed/*,}
-rmdir $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib/endorsed
+mv $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/lib{/endorsed/*,}
+rmdir $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/lib/endorsed
 
-cp -p %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/log4j.xconf
-cp -p %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/cocoon.xconf
-cp -p %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/web.xml
-cp -p %{SOURCE6} $RPM_BUILD_ROOT%{_sharedstatedir}/lenya/modules/languageselector/resources/images/pl.svg
-mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/{*conf,*xml,*properties} $RPM_BUILD_ROOT%{_sysconfdir}/lenya
-for I in $RPM_BUILD_ROOT%{_sysconfdir}/lenya/*; do
-	ln -sf %{_sysconfdir}/lenya/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/
+cp -p %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/log4j.xconf
+cp -p %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/cocoon.xconf
+cp -p %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/web.xml
+cp -p %{SOURCE6} $RPM_BUILD_ROOT%{_sharedstatedir}/%{name}/modules/languageselector/resources/images/pl.svg
+mv $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/{*conf,*xml,*properties} $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
+for I in $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/*; do
+	ln -sf %{_sysconfdir}/%{name}/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/%{name}/WEB-INF/
 done
 
 %clean
@@ -89,9 +89,20 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(644,root,root,755)
 %doc CREDITS.txt KEYS NOTICE.txt README.txt RELEASE-NOTES.txt mysql-schema.sql
-%dir %{_sysconfdir}/lenya
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lenya/*
+%dir %{_sysconfdir}/%{name}
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/cocoon.xconf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/instrumentation.xconf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/log4j.xconf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/logkit.xconf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/neko.properties
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/tidy.properties
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/web.xml
+%dir %{_sysconfdir}/%{name}/properties
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/properties/core.properties
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/properties/sample-html.properties
+%dir %{_sysconfdir}/%{name}/xconf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/xconf/lucene2.xconf
 %config(noreplace) %verify(not md5 mtime size) %{_tomcatconfdir}/lenya.xml
-%{_datadir}/lenya
-%config(noreplace) %verify(not md5 mtime size) %attr(2775,root,servlet) %{_sharedstatedir}/lenya
-%attr(2775,root,servlet) %dir /var/log/lenya
+%{_datadir}/%{name}
+%config(noreplace) %verify(not md5 mtime size) %attr(2775,root,servlet) %{_sharedstatedir}/%{name}
+%attr(2775,root,servlet) %dir /var/log/%{name}
