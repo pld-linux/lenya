@@ -7,7 +7,7 @@ Summary:	Open Source Java/XML Content Management System
 Summary(pl.UTF-8):	System zarządzania treścią oparty na Javie i XML
 Name:		lenya
 Version:	2.0.4
-Release:	2
+Release:	3
 License:	Apache v2
 Group:		Networking/Daemons/Java/Servlets
 Source0:	http://ftp.tpnet.pl/vol/d1/apache/lenya/SOURCES/apache-%{name}-%{version}-src.tar.gz
@@ -46,7 +46,7 @@ definiowania procedury workflow.
 %prep
 %setup -q -n apache-%{name}-%{version}-src
 %patch0 -p1
-cp %{SOURCE5} mysql-schema.sql
+cp -p %{SOURCE5} mysql-schema.sql
 
 %build
 export ANT_HOME=tools
@@ -63,10 +63,10 @@ chmod 700 ./build.sh
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_sharedstatedir}/tomcat/conf/Catalina/localhost,/var/log/lenya}
-install %{SOURCE1} $RPM_BUILD_ROOT%{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
+install -d $RPM_BUILD_ROOT{%{_sysconfdir}/lenya,%{_datadir},%{_tomcatconfdir},%{_sharedstatedir},/var/log/lenya}
+cp -p %{SOURCE1} $RPM_BUILD_ROOT%{_tomcatconfdir}/lenya.xml
 cp -a build/lenya/webapp $RPM_BUILD_ROOT%{_datadir}/lenya
-mv $RPM_BUILD_ROOT%{_datadir}/lenya/lenya $RPM_BUILD_ROOT%{_sharedstatedir}/lenya
+mv $RPM_BUILD_ROOT%{_datadir}/lenya/lenya $RPM_BUILD_ROOT%{_sharedstatedir}
 ln -s %{_sharedstatedir}/lenya $RPM_BUILD_ROOT%{_datadir}/lenya
 
 # use libraries provided by lenya. Lenya need exact version of these jars.
@@ -74,13 +74,13 @@ ln -s %{_sharedstatedir}/lenya $RPM_BUILD_ROOT%{_datadir}/lenya
 mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib{/endorsed/*,}
 rmdir $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/lib/endorsed
 
-cp %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/log4j.xconf
-cp %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/cocoon.xconf
-cp %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/web.xml
-cp %{SOURCE6} $RPM_BUILD_ROOT%{_sharedstatedir}/lenya/modules/languageselector/resources/images/pl.svg
+cp -p %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/log4j.xconf
+cp -p %{SOURCE3} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/cocoon.xconf
+cp -p %{SOURCE4} $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/web.xml
+cp -p %{SOURCE6} $RPM_BUILD_ROOT%{_sharedstatedir}/lenya/modules/languageselector/resources/images/pl.svg
 mv $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/{*conf,*xml,*properties} $RPM_BUILD_ROOT%{_sysconfdir}/lenya
 for I in $RPM_BUILD_ROOT%{_sysconfdir}/lenya/*; do
-  ln -sf %{_sysconfdir}/lenya/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/
+	ln -sf %{_sysconfdir}/lenya/$(basename $I) $RPM_BUILD_ROOT%{_datadir}/lenya/WEB-INF/
 done
 
 %clean
@@ -91,7 +91,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc CREDITS.txt KEYS NOTICE.txt README.txt RELEASE-NOTES.txt mysql-schema.sql
 %dir %{_sysconfdir}/lenya
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lenya/*
-%config(noreplace) %verify(not md5 mtime size) %{_sharedstatedir}/tomcat/conf/Catalina/localhost/lenya.xml
+%config(noreplace) %verify(not md5 mtime size) %{_tomcatconfdir}/lenya.xml
 %{_datadir}/lenya
 %config(noreplace) %verify(not md5 mtime size) %attr(2775,root,servlet) %{_sharedstatedir}/lenya
 %attr(2775,root,servlet) %dir /var/log/lenya
