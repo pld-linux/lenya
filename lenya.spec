@@ -1,7 +1,13 @@
 # TODO:
 # - where to setup lenya username/passwords? Is it possible to integrate it
 #   with LDAP?
-
+# - jdk 1.7: cocoon does not build with 1.7:
+#   src/externals/cocoon_2_1_x/src/java/org/apache/cocoon/reading/ImageReader.java:342: error: cannot find symbol
+#   [cocoon.javac]             } catch (ImageFormatException e) {
+#   [cocoon.javac]                      ^
+#   [cocoon.javac]   symbol:   class ImageFormatException
+#   [cocoon.javac]   location: class ImageReader
+#   http://stackoverflow.com/questions/12846098/building-cocoon-2-1-0-with-jdk-7-fails-compile-build-xml68
 %include	/usr/lib/rpm/macros.java
 Summary:	Open Source Java/XML Content Management System
 Summary(pl.UTF-8):	System zarządzania treścią oparty na Javie i XML
@@ -22,7 +28,7 @@ Source6:	%{name}-pl.svg
 Patch0:		%{name}-langpl.patch
 URL:		http://lenya.apache.org/
 BuildRequires:	ant
-BuildRequires:	jdk
+BuildRequires:	jdk < 1.7
 BuildRequires:	jpackage-utils
 BuildRequires:	rpm-javaprov
 BuildRequires:	rpmbuild(macros) >= 1.300
