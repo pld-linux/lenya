@@ -50,7 +50,7 @@ definiowania procedury workflow.
 
 %prep
 %setup -q -n apache-%{name}-%{version}-src
-%patch0 -p1
+%patch -P0 -p1
 cp -p %{SOURCE5} mysql-schema.sql
 
 %build
